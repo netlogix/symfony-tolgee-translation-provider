@@ -66,14 +66,14 @@ jobs:
 
       - name: upload coverage file
         if: "${{github.event_name}} == 'pull_request'"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.env.php }}-${{ matrix.env.symfony }}
           path: "coverage/test.${{ matrix.env.php }}.${{ matrix.env.symfony }}.cov"
 
       - name: upload composer.lock on fail
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: "composer-lock-${{ matrix.env.php }}-${{ matrix.env.symfony }}"
           path: |
