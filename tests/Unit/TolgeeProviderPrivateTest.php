@@ -12,7 +12,7 @@ use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProvider;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mime\Part\DataPart;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\ProviderInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -34,7 +34,7 @@ class TolgeeProviderPrivateTest extends TestCase
     {
         return new TolgeeProvider(
             $client ?? new MockHttpClient(),
-            $this->createMock(JsonFileLoader::class),
+            $this->createMock(ArrayLoader::class),
             $this->createMock(LoggerInterface::class),
             'en',
             ''

@@ -11,7 +11,7 @@ use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProviderFactory;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\Translation\Exception\IncompleteDsnException;
 use Symfony\Component\Translation\Exception\UnsupportedSchemeException;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\ProviderInterface;
 use Symfony\Component\Translation\Provider\Dsn;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -99,7 +99,7 @@ class TolgeeProviderFactoryTest extends TestCase
             $client,
             $this->createMock(LoggerInterface::class),
             'en',
-            new JsonFileLoader()
+            new ArrayLoader()
         );
     }
 }

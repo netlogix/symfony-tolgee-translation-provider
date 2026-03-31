@@ -44,6 +44,7 @@ class TolgeeProviderTest extends KernelTestCase
 
     public function testReadTranslations(): void
     {
+
         $this->client->setResponseFactory(function ($method, $url, $options) {
             $fixture = 'TolgeeApi/Functional/Read';
             if ($method == 'GET' && strpos($url, '/used-namespaces') > 1) {
@@ -58,11 +59,10 @@ class TolgeeProviderTest extends KernelTestCase
                 $query = $options['query'];
                 $filterNamespace = $query['filterNamespace'];
                 $languages = $query['languages'];
-                $data = HttpClientFixture::getData(
-                    $fixture,
-                    join('.', ['export', $filterNamespace, $languages]),
-                    $method
-                );
+                $data = HttpClientFixture::getExportZip($fixture, $filterNamespace, $languages);
+            }
+            else {
+                throw new \RuntimeException(sprintf('Unhandled request: %s %s', $method, $url));
             }
 
             return new MockResponse($data ?? '');
@@ -98,7 +98,7 @@ class TolgeeProviderTest extends KernelTestCase
             )
         );
 
-        $this->assertSame($translations, $excpect);
+        $this->assertSame($excpect, $translations);
     }
 
     public function testWrite(): void

@@ -13,27 +13,24 @@ use Symfony\Component\Translation\Provider\ProviderInterface;
 use Symfony\Component\Translation\Test\ProviderTestCase;
 use Symfony\Component\Translation\TranslatorBag;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProvider;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
 
 class TolgeeProviderTest extends ProviderTestCase
 {
-    /**
-     * @return LoaderInterface|MockObject
-     */
     protected function getLoader(): LoaderInterface
     {
-        return $this->loader ?? $this->loader = $this->createMock(JsonFileLoader::class);
+        return $this->loader ?? $this->loader = new ArrayLoader();
     }
 
-    public static function createProvider($client, LoaderInterface $loader, LoggerInterface $logger, string $defaultLocale, string $endpoint): ProviderInterface
+    public static function createProvider(HttpClientInterface $client, LoaderInterface $loader, LoggerInterface $logger, string $defaultLocale, string $endpoint): ProviderInterface
     {
         return new TolgeeProvider($client, $loader, $logger, $defaultLocale, $endpoint);
     }
 
     public static  function toStringProvider(): iterable
     {
-        $loader = new JsonFileLoader();
+        $loader = new ArrayLoader();
         yield 'app.tolgee.io' => [
             self::createProvider(
                 self::getHttpClient(),
@@ -96,25 +93,26 @@ class TolgeeProviderTest extends ProviderTestCase
     {
         $response = function (string $method, string $url, array $options = []) use ($locale, $domain, $responseContent): ResponseInterface {
             $this->assertSame('GET', $method);
-            $this->assertSame('https://app.tolgee.io/v2/projects/1337/export?filterNamespace=' . $domain . '&languages=' . $locale . '&format=JSON&zip=0', $url);
 
-            return new MockResponse(json_encode($responseContent));
+            // Check URL contains all required parameters (order may vary)
+            $this->assertStringContainsString('filterNamespace=' . $domain, $url);
+            $this->assertStringContainsString('languages=' . $locale, $url);
+            $this->assertStringContainsString('format=JSON', $url);
+            $this->assertStringContainsString('zip=1', $url);
+
+            $zip = new \ZipArchive();
+            $tmpZip = tempnam(sys_get_temp_dir(), 'test_export_') . ".zip";
+            $zip->open($tmpZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+            $zip->addFromString(sprintf('%s/%s.json', $domain, $locale), json_encode($responseContent));
+            $zip->close();
+            $content = file_get_contents($tmpZip);
+            unlink($tmpZip);
+            return new MockResponse($content);
         };
 
-        $jsonFile = tempnam(sys_get_temp_dir(), "tolgee.$domain.$locale.json");
-        file_put_contents($jsonFile, json_encode($responseContent));
-
-        $loader = $this->getLoader();
-        $loader->expects($this->once())
-            ->method('load')
-            ->willReturn((new JsonFileLoader())->load($jsonFile, $locale, $domain));
-
-        $client = self::getHttpClient();
-
-        $provider = self::createProvider($client, $loader, $this->getLogger(), $this->getDefaultLocale(), 'api.lokalise.com');
+        $client = self::getHttpClient($response);
+        $provider = self::createProvider($client, $this->getLoader(), $this->getLogger(), $this->getDefaultLocale(), 'app.tolgee.io');
         $translatorBag = $provider->read([$domain], [$locale]);
-        unset($jsonFile);
-
         $this->assertEquals($expectedTranslatorBag->getCatalogue($locale)->all($domain), $translatorBag->getCatalogue($locale)->all($domain));
     }
 
@@ -180,38 +178,35 @@ class TolgeeProviderTest extends ProviderTestCase
     public function testReadForManyLocalesAndManyDomains(array $locales, array $domains, array $responseContents, TranslatorBag $expectedTranslatorBag)
     {
         $response = function (string $method, string $url, array $options = []) use ($locales, $domains, $responseContents): ResponseInterface {
-
             $this->assertSame('GET', $method);
-
             $query = [];
             parse_str(parse_url($url, PHP_URL_QUERY), $query);
             self::assertArrayHasKey('filterNamespace', $query);
             self::assertArrayHasKey('languages', $query);
             $domain = $query['filterNamespace'];
             $locale = $query['languages'];
-            self::assertContains($domain, $domains);
-            self::assertContains($locale, $locales);
-
-            $this->assertSame('https://app.tolgee.io/v2/projects/1337/export?filterNamespace=' . $domain . '&languages=' . $locale . '&format=JSON&zip=0', $url);
-
-            return new MockResponse(json_encode($responseContents[$domain][$locale]));
+            self::assertEquals($domain, join(",", $domains));
+            self::assertEquals($locale, join(",", $locales));
+            $zip = new \ZipArchive();
+            $tmpZip = tempnam(sys_get_temp_dir(), 'test_export_') . ".zip";
+            $zip->open($tmpZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+            foreach ($domains as $domain) {
+                foreach ($locales as $locale) {
+                   $zip->addFromString(sprintf('%s/%s.json', $domain, $locale), json_encode($responseContents[$domain][$locale]));
+               }
+            }
+            $zip->close();
+            $content = file_get_contents($tmpZip);
+            unlink($tmpZip);
+            return new MockResponse($content);
         };
 
-        $loader = $this->getLoader();
-        $loader->expects($this->atLeastOnce())
-            ->method('load')
-            ->willReturnCallback(function ($resource, $locale, $domain) use ($responseContents) {
-                self::assertEquals(json_encode($responseContents[$domain][$locale]), file_get_contents($resource));
-                return (new ArrayLoader())->load($responseContents[$domain][$locale], $locale, $domain);
-            });
         $client = self::getHttpClient($response);
-        $provider = self::createProvider($client, $loader, $this->getLogger(), $this->getDefaultLocale(), 'api.lokalise.com');
-
+        $provider = self::createProvider($client, $this->getLoader(), $this->getLogger(), $this->getDefaultLocale(), 'app.tolgee.io');
         $translatorBag = $provider->read($domains, $locales);
-
         foreach ($domains as $domain) {
             foreach ($locales as $locale) {
-                $this->assertEquals($expectedTranslatorBag->getCatalogue($locale)->all($domain), $translatorBag->getCatalogue($locale)->all($domain));
+              $this->assertEquals($expectedTranslatorBag->getCatalogue($locale)->all($domain), $translatorBag->getCatalogue($locale)->all($domain));
             }
         }
     }

@@ -7,7 +7,7 @@ namespace Netlogix\SymfonyTolgeeTranslationProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Translation\Exception\IncompleteDsnException;
 use Symfony\Component\Translation\Exception\UnsupportedSchemeException;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\AbstractProviderFactory;
 use Symfony\Component\Translation\Provider\Dsn;
 use Symfony\Component\Translation\Provider\ProviderInterface;
@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class TolgeeProviderFactory extends AbstractProviderFactory
 {
-    /** @var JsonFileLoader */
+    /** @var ArrayLoader */
     private $loader;
 
     /** @var HttpClientInterface */
@@ -32,7 +32,7 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
         HttpClientInterface $client,
         LoggerInterface     $logger,
         string              $defaultLocale,
-        JsonFileLoader      $loader
+        ArrayLoader         $loader
     ) {
         $this->client = $client;
         $this->logger = $logger;

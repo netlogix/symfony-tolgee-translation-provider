@@ -31,4 +31,42 @@ class HttpClientFixture
             $page
         ));
     }
+
+    public static function getExportZip(string $fixture, string $namespace, string $languages): string
+    {
+        $zip = new \ZipArchive();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'tolgee_zip_') . ".zip";
+        $res = $zip->open($tmpZip, \ZipArchive::CREATE);
+        if ($res !== true) {
+            throw new \RuntimeException('Unable to open ZIP file for writing at ' . $tmpZip . ': error ' . $res);
+        }
+
+        $namespaces = explode(',', $namespace);
+        $langArray = explode(',', $languages);
+
+        // For each namespace and language combination, try to add the fixture file
+        foreach ($namespaces as $ns) {
+            foreach ($langArray as $lang) {
+                $filename = sprintf('%s/%s.json', $ns, $lang);
+                $jsonPath = sprintf(
+                    '%s/export.%s.%s.get.json',
+                    self::getPath($fixture),
+                    $ns,
+                    $lang
+                );
+                if (file_exists($jsonPath)) {
+                    $content = file_get_contents($jsonPath);
+                    if (!$zip->addFromString($filename, $content)) {
+                        $zip->close();
+                        unlink($tmpZip);
+                        throw new \RuntimeException('Failed to add file to ZIP: ' . $filename);
+                    }
+                }
+            }
+        }
+        $zip->close();
+        $content = file_get_contents($tmpZip);
+        unlink($tmpZip);
+        return $content;
+    }
 }

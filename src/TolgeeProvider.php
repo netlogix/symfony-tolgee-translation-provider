@@ -12,7 +12,7 @@ use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\Intl\Locales;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\ProviderInterface;
 use Symfony\Component\Translation\TranslatorBag;
 use Symfony\Component\Translation\TranslatorBagInterface;
@@ -42,7 +42,7 @@ class TolgeeProvider implements ProviderInterface
 
     public function __construct(
         HttpClientInterface $client,
-        JsonFileLoader      $loader,
+        ArrayLoader         $loader,
         LoggerInterface     $logger,
         string              $defaultLocale,
         string              $endpoint,
@@ -63,39 +63,34 @@ class TolgeeProvider implements ProviderInterface
 
     public function read(array $domains, array $locales): TranslatorBag
     {
-        $locales = $locales ?: $this->getLanguages();
-        $domains = $domains ?: $this->getAllNamespaces();
         $translatorBag = new TranslatorBag();
+        $locales = $locales ?: array_values(iterator_to_array($this->getLanguages()));
+        $domains = $domains ?: array_values($this->getAllNamespaces());
 
-        $query = [
-            'format' => 'JSON',
-            'zip' => false
-        ];
+        $files = $this->exportFiles($domains, $locales);
 
-        if ($this->filterState) {
-            $query['filterState'] = $this->filterState;
-        }
+        foreach ($domains as $domain) {
+            if ($domain === null) {
+                $this->logger->warning('Unnamed domains are not allowed');
+                continue;
+            }
 
-        foreach ($locales as $locale) {
-            foreach ($domains as $domain) {
-                if ($domain === null) {
-                    $this->logger->warning(sprintf(
-                        'Unnamed domains are not allowed',
-                        $locale
-                    ));
+            foreach ($locales as $language) {
+                $expected = sprintf('%s/%s.json', $domain, $language);
+                if (!isset($files[$expected])) {
                     continue;
                 }
-                $this->exportFileCallback(
-                    function (?string $jsonFile) use ($translatorBag, $locale, $domain) {
-                        if ($jsonFile) {
-                            $tolgeeCatalogue = $this->loader->load($jsonFile, $locale, $domain);
-                            $translatorBag->addCatalogue($tolgeeCatalogue);
-                        }
-                    },
-                    $domain,
-                    $locale,
-                    $this->filterState
-                );
+                $decoded = json_decode($files[$expected], true);
+                if ($decoded === null) {
+                    $this->logger->warning(sprintf('Unable to decode JSON from %s: %s', $expected, json_last_error_msg()));
+                    continue;
+                }
+                try {
+                    $tolgeeCatalogue = $this->loader->load($decoded, $language, $domain);
+                    $translatorBag->addCatalogue($tolgeeCatalogue);
+                } catch (\Exception $e) {
+                    $this->logger->warning(sprintf('Unable to load translations from %s: %s', $expected, $e->getMessage()));
+                }
             }
         }
 
@@ -406,54 +401,95 @@ class TolgeeProvider implements ProviderInterface
         } while ($pages > $currentPage);
     }
 
+    private function exportFiles(array $domains, array $locales): array
+    {
+        if (empty($domains) || empty($locales)) {
+            $this->logger->warning('Export skipped because domains or locales are empty', [
+                'domains' => $domains,
+                'locales' => $locales,
+            ]);
 
-    private function exportFileCallback(
-        callable $callback,
-        string $domain,
-        string $locale,
-        ?string $filterState = null
-    ): void {
+            return [];
+        }
 
         $query = [
-            'filterNamespace' => $domain,
-            'languages' => $locale,
             'format' => 'JSON',
-            'zip' => false
+            'zip' => true,
+            'languages' => implode(',', $locales),
+            'filterNamespace' => implode(',', $domains),
         ];
 
-        if ($filterState) {
-            $query['filterState'] = $filterState;
+        if ($this->filterState) {
+            $query['filterState'] = $this->filterState;
         }
 
         $response = $this->client->request('GET', 'export', [
             'buffer' => true,
-            'query' => $query
+            'query' => $query,
         ]);
 
         if (400 === $response->getStatusCode()) {
-
             $data = $response->toArray(false);
             if ($data['code'] ?? '' === 'no_exported_result') {
-                $callback(null);
-                return;
+                $this->logger->warning('No exported result from export API', [
+                    'domains' => $domains,
+                    'locales' => $locales,
+                    'filterState' => $this->filterState,
+                ]);
+                return [];
             }
         }
 
         $this->checkResponseStatusCode($response);
 
-        $jsonFile = tempnam(sys_get_temp_dir(), "tolgee.$domain.$locale.json");
-        $jsonFileHandler = fopen($jsonFile, 'w');
+        return $this->extractZipContents($response);
+    }
 
-        foreach ($this->client->stream($response) as $chunk) {
-            fwrite($jsonFileHandler, $chunk->getContent());
+    private function extractZipContents(ResponseInterface $response): array
+    {
+        $zipFile = tempnam(sys_get_temp_dir(), 'tolgee_export');
+        if ($zipFile === false) {
+            throw new TolgeeException('Unable to create temporary file for export', 1700650000, $response);
         }
 
-        fclose($jsonFileHandler);
+        $zipFileHandle = fopen($zipFile, 'w');
+        if ($zipFileHandle === false) {
+            throw new TolgeeException('Unable to open temporary file for export', 1700650001, $response);
+        }
 
-        $callback($jsonFile);
+        foreach ($this->client->stream($response) as $chunk) {
+            fwrite($zipFileHandle, $chunk->getContent());
+        }
 
-        unlink($jsonFile);
+        fclose($zipFileHandle);
+
+        $zip = new \ZipArchive();
+        $res = $zip->open($zipFile);
+        if ($res !== true) {
+            unlink($zipFile);
+            throw new TolgeeException('Unable to open export ZIP archive', 1700650002, $response);
+        }
+
+        $map = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name === false) {
+                continue;
+            }
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                continue;
+            }
+            $map[$name] = $content;
+        }
+
+        $zip->close();
+        unlink($zipFile);
+
+        return $map;
     }
+
+
 
     private function getAllNamespaces(): array
     {
