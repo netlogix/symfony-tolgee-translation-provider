@@ -34,7 +34,7 @@ jobs:
           - { php: 8.3, symfony: 7.0 }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Composer cache
         uses: actions/cache@v6
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "${{ github.event_name }} == 'pull_request'"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
