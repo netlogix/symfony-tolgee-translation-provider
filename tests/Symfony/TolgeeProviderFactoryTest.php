@@ -4,16 +4,24 @@ declare(strict_types=1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Symfony;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProviderFactory as ProviderFactory;
 use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\Dsn;
 use Symfony\Component\Translation\Provider\ProviderFactoryInterface;
-use Symfony\Component\Translation\Test\ProviderFactoryTestCase;
+use Symfony\Component\Translation\Test\AbstractProviderFactoryTestCase;
+use Symfony\Component\Translation\Test\IncompleteDsnTestTrait;
 
-class TolgeeProviderFactoryTest extends ProviderFactoryTestCase
+class TolgeeProviderFactoryTest extends AbstractProviderFactoryTestCase
 {
+    use IncompleteDsnTestTrait;
+
+    private ArrayLoader $loader;
+    private MockHttpClient $client;
+    private LoggerInterface $logger;
     public static function supportsProvider(): iterable
     {
         yield "http" => [true, 'tolgee://1:API_KEY@tolgee.dev'];
@@ -87,6 +95,21 @@ class TolgeeProviderFactoryTest extends ProviderFactoryTestCase
 
     protected function getLoader(): ArrayLoader
     {
-        return $this->loader ?? $this->loader = new ArrayLoader();
+        return $this->loader ??= new ArrayLoader();
+    }
+
+    protected function getClient(): MockHttpClient
+    {
+        return $this->client ??= new MockHttpClient();
+    }
+
+    protected function getLogger(): LoggerInterface
+    {
+        return $this->logger ??= new NullLogger();
+    }
+
+    protected function getDefaultLocale(): string
+    {
+        return 'en';
     }
 }
