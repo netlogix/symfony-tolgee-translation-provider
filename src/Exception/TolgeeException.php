@@ -1,12 +1,14 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Exception;
 
+use Exception;
+use Throwable;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-class TolgeeException extends \Exception
+class TolgeeException extends Exception
 {
     private ?ResponseInterface $response;
 
@@ -14,7 +16,7 @@ class TolgeeException extends \Exception
         string $message,
         int $code = 0,
         ?ResponseInterface $response = null,
-        \Throwable $previous = null
+        ?Throwable $previous = null
     ) {
         $this->response = $response;
         parent::__construct($message, $code, $previous);

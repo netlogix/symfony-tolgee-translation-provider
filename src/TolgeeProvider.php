@@ -1,9 +1,13 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider;
 
+use Exception;
+use InvalidArgumentException;
+use Generator;
+use ZipArchive;
 use Psr\Log\LoggerInterface;
 use Netlogix\SymfonyTolgeeTranslationProvider\Exception\TolgeeException;
 use Symfony\Component\HttpClient\Exception\ClientException;
@@ -21,12 +25,18 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class TolgeeProvider implements ProviderInterface
 {
-    public const ALLOWED_FILTER_STATES = [
-            "UNTRANSLATED", "TRANSLATED", "REVIEWED"
+    public const
+        ALLOWED_FILTER_STATES = [
+            'UNTRANSLATED',
+            'TRANSLATED',
+            'REVIEWED'
         ],
         ALLOWED_FORCE_MODES = [
-            "KEEP", "OVERRIDE", "MERGE"
-        ];
+            'KEEP',
+            'OVERRIDE',
+            'MERGE'
+        ]
+    ;
 
     private const MAX_PAGE_SIZE = 100;
 
@@ -42,11 +52,11 @@ class TolgeeProvider implements ProviderInterface
 
     public function __construct(
         HttpClientInterface $client,
-        ArrayLoader         $loader,
-        LoggerInterface     $logger,
-        string              $defaultLocale,
-        string              $endpoint,
-        ?string             $filterState = NULL
+        ArrayLoader $loader,
+        LoggerInterface $logger,
+        string $defaultLocale,
+        string $endpoint,
+        ?string $filterState = null
     ) {
         $this->client = $client;
         $this->loader = $loader;
@@ -64,8 +74,8 @@ class TolgeeProvider implements ProviderInterface
     public function read(array $domains, array $locales): TranslatorBag
     {
         $translatorBag = new TranslatorBag();
-        $locales = $locales ?: array_values(iterator_to_array($this->getLanguages()));
-        $domains = $domains ?: array_values($this->getAllNamespaces());
+        $locales = $locales !== [] ? $locales : array_values(iterator_to_array($this->getLanguages()));
+        $domains = $domains !== [] ? $domains : array_values($this->getAllNamespaces());
 
         $files = $this->exportFiles($domains, $locales);
 
@@ -77,19 +87,27 @@ class TolgeeProvider implements ProviderInterface
 
             foreach ($locales as $language) {
                 $expected = sprintf('%s/%s.json', $domain, $language);
-                if (!isset($files[$expected])) {
+                if (( $files[$expected] ?? null ) === null) {
                     continue;
                 }
                 $decoded = json_decode($files[$expected], true);
                 if ($decoded === null) {
-                    $this->logger->warning(sprintf('Unable to decode JSON from %s: %s', $expected, json_last_error_msg()));
+                    $this->logger->warning(sprintf(
+                        'Unable to decode JSON from %s: %s',
+                        $expected,
+                        json_last_error_msg()
+                    ));
                     continue;
                 }
                 try {
                     $tolgeeCatalogue = $this->loader->load($decoded, $language, $domain);
                     $translatorBag->addCatalogue($tolgeeCatalogue);
-                } catch (\Exception $e) {
-                    $this->logger->warning(sprintf('Unable to load translations from %s: %s', $expected, $e->getMessage()));
+                } catch (Exception $e) {
+                    $this->logger->warning(sprintf(
+                        'Unable to load translations from %s: %s',
+                        $expected,
+                        $e->getMessage()
+                    ));
                 }
             }
         }
@@ -103,7 +121,7 @@ class TolgeeProvider implements ProviderInterface
 
         $keysToDelete = [];
 
-        $delete = function (array &$keys, bool $force = false) {
+        $delete = function (array &$keys, bool $force = false): void {
             if ($force || count($keys) > 1) {
                 $this->deleteKeys($keys);
                 $keys = [];
@@ -119,7 +137,7 @@ class TolgeeProvider implements ProviderInterface
 
         $delete($keysToDelete, true);
 
-        #throw new \LogicException('Deleting translations is not supported by the Tolgee provider.');
+        //throw new \LogicException('Deleting translations is not supported by the Tolgee provider.');
     }
 
     public function write(TranslatorBagInterface $translatorBag): void
@@ -128,14 +146,14 @@ class TolgeeProvider implements ProviderInterface
 
         $languages = iterator_to_array($this->getLanguages());
 
-        # remove files from import
+        // remove files from import
         $this->importDelete();
 
         $importMap = [];
 
         foreach ($translatorBag->getCatalogues() as $cataloge) {
             $locale = $cataloge->getLocale();
-            if (!in_array($locale, $languages)) {
+            if (!in_array($locale, $languages, true)) {
                 $this->addLanguage($locale);
             }
             foreach ($cataloge->getDomains() as $domain) {
@@ -150,10 +168,7 @@ class TolgeeProvider implements ProviderInterface
                 if (!count($translations)) {
                     continue;
                 }
-                $files[] = $this->createDataPartFile(
-                    $locale,
-                    json_encode($cataloge->all($domain))
-                );
+                $files[] = $this->createDataPartFile($locale, json_encode($cataloge->all($domain)));
             }
             if (!count($files)) {
                 continue;
@@ -166,78 +181,49 @@ class TolgeeProvider implements ProviderInterface
 
     private function createDataPartFile($name, $content): DataPart
     {
-        return new DataPart(
-            $content,
-            sprintf('%s.json', $name),
-            'application/json'
-        );
+        return new DataPart($content, sprintf('%s.json', $name), 'application/json');
     }
 
     private function import(array $files): array
     {
-        array_walk($files, function ($file) {
+        array_walk($files, static function ($file): void {
             if (!is_a($file, DataPart::class)) {
-                throw new \InvalidArgumentException(sprintf(
-                    'Expected instance of %s',
-                    DataPart::class
-                ));
+                throw new InvalidArgumentException(sprintf('Expected instance of %s', DataPart::class));
             }
         });
 
-        $formData = new FormDataPart(array_map(function ($f) {
-            return ['files' => $f];
-        }, $files));
+        $formData = new FormDataPart(array_map(static fn($f) => ['files' => $f], $files));
 
         $response = $this->client->request('POST', 'import', [
             'headers' => $formData->getPreparedHeaders()->toArray(),
-            'body' => $formData->bodyToIterable(),
+            'body' => $formData->bodyToIterable()
         ]);
 
         try {
             $data = $response->toArray();
-        } catch (\Exception $e) {
-            throw new TolgeeException(
-                'Unable to import translations',
-                1700642547,
-                $response,
-                $e
-            );
+        } catch (Exception $e) {
+            throw new TolgeeException('Unable to import translations', 1_700_642_547, $response, $e);
         }
 
-        if (!empty($data['errors'])) {
-            throw new TolgeeException(
-                'Unable to import translations',
-                1700642575,
-                $response
-            );
+        if (( $data['errors'] ?? [] ) !== []) {
+            throw new TolgeeException('Unable to import translations', 1_700_642_575, $response);
         }
 
         return array_column($data['result']['_embedded']['languages'] ?? [], 'importFileId');
     }
 
-    private function getLanguages(): \Generator
+    private function getLanguages(): Generator
     {
-        foreach ($this->pagedRequest(function (int $page) {
-            return $this->client->request(
-                'GET',
-                'languages',
-                [
-                    'query' => [
-                        'page' => $page,
-                        'size' => self::MAX_PAGE_SIZE
-                    ]
-                ]
-            );
-        }) as $response) {
+        foreach ($this->pagedRequest(fn(int $page) => $this->client->request('GET', 'languages', [
+            'query' => [
+                'page' => $page,
+                'size' => self::MAX_PAGE_SIZE
+            ]
+        ])) as $response) {
             try {
                 $data = $response->toArray();
-            } catch (\Exception $e) {
-                throw new TolgeeException(
-                    'Unable to get languages',
-                    1700643444,
-                    $response,
-                    $e
-                );
+            } catch (Exception $e) {
+                throw new TolgeeException('Unable to get languages', 1_700_643_444, $response, $e);
             }
             foreach ($data['_embedded']['languages'] ?? [] as $key) {
                 yield $key['id'] => $key['tag'];
@@ -252,13 +238,13 @@ class TolgeeProvider implements ProviderInterface
         try {
             $name = Locales::getName($keyName);
             $originalName = Locales::getName($keyName, $keyName);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $name = $keyName;
             $originalName = $keyName;
         }
         try {
             $flagEmoji = $this->country2flag($keyName);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $flagEmoji = null;
         }
         $body = json_encode([
@@ -275,30 +261,27 @@ class TolgeeProvider implements ProviderInterface
         ]);
         try {
             $data = $response->toArray();
-        } catch (\Exception $e) {
-            throw $e; #@todo add custom exception
+        } catch (Exception $e) {
+            throw $e; //@todo add custom exception
         }
+
         return $data['id'];
     }
 
     private function importSelectNamespace(string $namespace, array $fileIds): void
     {
         foreach ($fileIds as $fileId) {
-            $response = $this->client->request(
-                'PUT',
-                sprintf('import/result/files/%d/select-namespace', $fileId),
-                [
-                    'headers' => [
-                        'Content-Type' => 'application/json'
-                    ],
-                    'body' => json_encode([
-                        'namespace' => $namespace
-                    ])
-                ]
-            );
+            $response = $this->client->request('PUT', sprintf('import/result/files/%d/select-namespace', $fileId), [
+                'headers' => [
+                    'Content-Type' => 'application/json'
+                ],
+                'body' => json_encode([
+                    'namespace' => $namespace
+                ])
+            ]);
             try {
                 $this->checkResponseStatusCode($response);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $data = $response->toArray(false);
                 throw $e;
             }
@@ -307,11 +290,11 @@ class TolgeeProvider implements ProviderInterface
 
     private function importApply(string $forceMode = 'KEEP'): void
     {
-        if (!in_array($forceMode, self::ALLOWED_FORCE_MODES)) {
-            throw new \InvalidArgumentException(sprintf(
+        if (!in_array($forceMode, self::ALLOWED_FORCE_MODES, true)) {
+            throw new InvalidArgumentException(sprintf(
                 'Invalid force mode "%s". Allowed modes are: %s',
                 $forceMode,
-                join(', ', self::ALLOWED_FORCE_MODES)
+                implode(', ', self::ALLOWED_FORCE_MODES)
             ));
         }
 
@@ -332,7 +315,7 @@ class TolgeeProvider implements ProviderInterface
         $response = $this->client->request('DELETE', 'import');
         try {
             $this->checkResponseStatusCode($response);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $data = $response->toArray(false);
             if ($data['code'] ?? '' === 'resource_not_found') {
                 return;
@@ -343,34 +326,35 @@ class TolgeeProvider implements ProviderInterface
 
     private function deleteKeys(array $keys): void
     {
-        $response = $this->client->request(
-            'DELETE',
-            'keys',
-            [
-                'json' => [
-                    'ids' => $keys
-                ]
+        $response = $this->client->request('DELETE', 'keys', [
+            'json' => [
+                'ids' => $keys
             ]
-        );
+        ]);
         $this->checkResponseStatusCode($response);
     }
 
-    private function getTranslationKeys(string $namespace, array $keys = []): \Generator
+    private function getTranslationKeys(string $namespace, array $keys = []): Generator
     {
         foreach (array_chunk($keys, 50) as $chunk) {
             // @todo: use query string in request options
-            $queryString = http_build_query([
-                'filterNamespace' => $namespace,
-                'filterKeyName' => $chunk,
-            ], '', '&', \PHP_QUERY_RFC3986);
+            $queryString = http_build_query(
+                [
+                    'filterNamespace' => $namespace,
+                    'filterKeyName' => $chunk
+                ],
+                '',
+                '&',
+                \PHP_QUERY_RFC3986
+            );
             $response = $this->client->request(
                 'GET',
                 'translations/select-all?' . $queryString,
                 [
-                    # 'query' => [
-                    #     'filterNamespace' => $namespace,
-                    #     'filterKeyName' => $chunk,
-                    # ]
+                    // 'query' => [
+                    //     'filterNamespace' => $namespace,
+                    //     'filterKeyName' => $chunk,
+                    // ]
                 ]
             );
             $data = $response->toArray();
@@ -382,7 +366,7 @@ class TolgeeProvider implements ProviderInterface
     /**
      * @return Generator<ResponseInterface>
      */
-    private function pagedRequest(callable $request): \Generator
+    private function pagedRequest(callable $request): Generator
     {
         $page = 0;
 
@@ -391,8 +375,8 @@ class TolgeeProvider implements ProviderInterface
             $response = $request($page);
             try {
                 $data = $response->toArray();
-            } catch (\Exception $e) {
-                throw $e; #@todo add custom exception
+            } catch (Exception $e) {
+                throw $e; //@todo add custom exception
             }
             $pages = $data['page']['totalPages'];
             $currentPage = $data['page']['number'] + 1;
@@ -403,10 +387,10 @@ class TolgeeProvider implements ProviderInterface
 
     private function exportFiles(array $domains, array $locales): array
     {
-        if (empty($domains) || empty($locales)) {
+        if ($domains === [] || $locales === []) {
             $this->logger->warning('Export skipped because domains or locales are empty', [
                 'domains' => $domains,
-                'locales' => $locales,
+                'locales' => $locales
             ]);
 
             return [];
@@ -416,7 +400,7 @@ class TolgeeProvider implements ProviderInterface
             'format' => 'JSON',
             'zip' => true,
             'languages' => implode(',', $locales),
-            'filterNamespace' => implode(',', $domains),
+            'filterNamespace' => implode(',', $domains)
         ];
 
         if ($this->filterState) {
@@ -425,7 +409,7 @@ class TolgeeProvider implements ProviderInterface
 
         $response = $this->client->request('GET', 'export', [
             'buffer' => true,
-            'query' => $query,
+            'query' => $query
         ]);
 
         if (400 === $response->getStatusCode()) {
@@ -434,8 +418,9 @@ class TolgeeProvider implements ProviderInterface
                 $this->logger->warning('No exported result from export API', [
                     'domains' => $domains,
                     'locales' => $locales,
-                    'filterState' => $this->filterState,
+                    'filterState' => $this->filterState
                 ]);
+
                 return [];
             }
         }
@@ -449,12 +434,12 @@ class TolgeeProvider implements ProviderInterface
     {
         $zipFile = tempnam(sys_get_temp_dir(), 'tolgee_export');
         if ($zipFile === false) {
-            throw new TolgeeException('Unable to create temporary file for export', 1700650000, $response);
+            throw new TolgeeException('Unable to create temporary file for export', 1_700_650_000, $response);
         }
 
         $zipFileHandle = fopen($zipFile, 'w');
         if ($zipFileHandle === false) {
-            throw new TolgeeException('Unable to open temporary file for export', 1700650001, $response);
+            throw new TolgeeException('Unable to open temporary file for export', 1_700_650_001, $response);
         }
 
         foreach ($this->client->stream($response) as $chunk) {
@@ -463,11 +448,11 @@ class TolgeeProvider implements ProviderInterface
 
         fclose($zipFileHandle);
 
-        $zip = new \ZipArchive();
+        $zip = new ZipArchive();
         $res = $zip->open($zipFile);
         if ($res !== true) {
             unlink($zipFile);
-            throw new TolgeeException('Unable to open export ZIP archive', 1700650002, $response);
+            throw new TolgeeException('Unable to open export ZIP archive', 1_700_650_002, $response);
         }
 
         $map = [];
@@ -489,21 +474,17 @@ class TolgeeProvider implements ProviderInterface
         return $map;
     }
 
-
-
     private function getAllNamespaces(): array
     {
         $response = $this->client->request('GET', 'used-namespaces');
 
         try {
             $data = $response->toArray();
-        } catch (\Exception $e) {
-            throw $e; #@todo add custom exception
+        } catch (Exception $e) {
+            throw $e; //@todo add custom exception
         }
 
-        return array_map(function ($n) {
-            return $n['name'];
-        }, $data['_embedded']['namespaces'] ?? []);
+        return array_map(static fn($n) => $n['name'], $data['_embedded']['namespaces'] ?? []);
     }
 
     private function checkResponseStatusCode(ResponseInterface $response): void
@@ -525,8 +506,9 @@ class TolgeeProvider implements ProviderInterface
 
     private function country2flag(string $iso): string
     {
-        return implode(array_map('mb_chr', array_map(function ($char) {
-            return ord($char) + 127397;
-        }, str_split(strtoupper($iso)))));
+        return implode('', array_map('mb_chr', array_map(
+            static fn($char) => ord($char) + 127_397,
+            str_split(strtoupper($iso))
+        )));
     }
 }

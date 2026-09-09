@@ -1,8 +1,11 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Fixtures;
+
+use ZipArchive;
+use RuntimeException;
 
 class HttpClientFixture
 {
@@ -11,19 +14,14 @@ class HttpClientFixture
         return __DIR__ . '/' . $fixture;
     }
 
-    public static function getData(string $fixture, string $path, string  $method): string
+    public static function getData(string $fixture, string $path, string $method): string
     {
-        return  file_get_contents(sprintf(
-            '%s/%s.%s.json',
-            self::getPath($fixture),
-            $path,
-            strtolower($method)
-        ));
+        return file_get_contents(sprintf('%s/%s.%s.json', self::getPath($fixture), $path, strtolower($method)));
     }
 
-    public static function getPagedData(string $fixture, string $path, string  $method, int $page=0): string
+    public static function getPagedData(string $fixture, string $path, string $method, int $page = 0): string
     {
-        return  file_get_contents(sprintf(
+        return file_get_contents(sprintf(
             '%s/%s.%s.%d.json',
             self::getPath($fixture),
             $path,
@@ -34,11 +32,11 @@ class HttpClientFixture
 
     public static function getExportZip(string $fixture, string $namespace, string $languages): string
     {
-        $zip = new \ZipArchive();
-        $tmpZip = tempnam(sys_get_temp_dir(), 'tolgee_zip_') . ".zip";
-        $res = $zip->open($tmpZip, \ZipArchive::CREATE);
+        $zip = new ZipArchive();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'tolgee_zip_') . '.zip';
+        $res = $zip->open($tmpZip, ZipArchive::CREATE);
         if ($res !== true) {
-            throw new \RuntimeException('Unable to open ZIP file for writing at ' . $tmpZip . ': error ' . $res);
+            throw new RuntimeException('Unable to open ZIP file for writing at ' . $tmpZip . ': error ' . $res);
         }
 
         $namespaces = explode(',', $namespace);
@@ -48,18 +46,13 @@ class HttpClientFixture
         foreach ($namespaces as $ns) {
             foreach ($langArray as $lang) {
                 $filename = sprintf('%s/%s.json', $ns, $lang);
-                $jsonPath = sprintf(
-                    '%s/export.%s.%s.get.json',
-                    self::getPath($fixture),
-                    $ns,
-                    $lang
-                );
+                $jsonPath = sprintf('%s/export.%s.%s.get.json', self::getPath($fixture), $ns, $lang);
                 if (file_exists($jsonPath)) {
                     $content = file_get_contents($jsonPath);
                     if (!$zip->addFromString($filename, $content)) {
                         $zip->close();
                         unlink($tmpZip);
-                        throw new \RuntimeException('Failed to add file to ZIP: ' . $filename);
+                        throw new RuntimeException('Failed to add file to ZIP: ' . $filename);
                     }
                 }
             }
@@ -67,6 +60,7 @@ class HttpClientFixture
         $zip->close();
         $content = file_get_contents($tmpZip);
         unlink($tmpZip);
+
         return $content;
     }
 }

@@ -1,0 +1,64 @@
+php-version = "8.0"
+editor-url = "phpstorm://open?file=%file%&line=%line%&column=%column%"
+
+[source]
+workspace = "."
+paths = [
+    "src",
+    "tests",
+]
+includes = ["vendor"]
+excludes = [
+    "tests/App/var/**",
+    "tests/App/translations/**",
+]
+
+[formatter]
+print-width = 120
+tab-width = 4
+use-tabs = false
+preset = 'psr-12'
+end-of-line = "Lf"
+single-quote = true
+empty-line-before-return = true
+
+[linter]
+integrations = ["phpunit", "symfony"]
+
+[linter.rules]
+strict-types = { enabled = true }
+identity-comparison = { enabled = true }
+ineffective-format-ignore-region = { enabled = true }
+ambiguous-function-call = { enabled = false }
+literal-named-argument = { enabled = false }
+final-controller = { enabled = false }
+no-boolean-flag-parameter = { enabled = false }
+# TolgeeProvider is an intentionally large facade class; splitting it is an
+# architectural decision, not a coding-standard fix.
+cyclomatic-complexity = { enabled = false }
+kan-defect = { enabled = false }
+too-many-methods = { enabled = false }
+excessive-parameter-list = { enabled = false }
+# False positive: flags the Symfony framework config key `secret` in the test
+# kernel, which is a dummy test value, not a real credential.
+no-literal-password = { enabled = false }
+# The functional test mock-response dispatch closures build up shared local
+# state (e.g. $data) across an if/elseif chain keyed on method+URL; forcing
+# guard clauses/match here would rewrite test logic for no functional benefit.
+no-else-clause = { enabled = false }
+halstead = { enabled = false }
+
+[analyzer]
+find-unused-definitions = true
+find-unused-expressions = false
+analyze-dead-code = false
+memoize-properties = true
+allow-possibly-undefined-array-keys = true
+perform-heuristic-checks = true
+check-throws = false
+check-missing-override = false
+find-unused-parameters = false
+strict-list-index-checks = false
+no-boolean-literal-comparison = false
+check-missing-type-hints = false
+register-super-globals = true

@@ -1,14 +1,9 @@
 {
     "name": "netlogix/symfony-tolgee-translation-provider",
     "description": "Symfony Tolgee Translation Provider Bridge",
-    "version": "2.0.0",
-    "homepage": "https://github.com/netlogix/symfony-tolgee-translation-provider",
-    "support":{
-      "source": "https://github.com/netlogix/symfony-tolgee-translation-provider/",
-      "docs": "https://github.com/netlogix/symfony-tolgee-translation-provider/blob/main/README.md",
-      "issues": "https://github.com/netlogix/symfony-tolgee-translation-provider/issues"
-    },
+    "license": "MIT",
     "type": "symfony-bridge",
+    "version": "2.0.0",
     "keywords": [
         "tolgee",
         "translation",
@@ -20,7 +15,32 @@
             "email": "sascha.heilmeier@netlogix.de"
         }
     ],
-    "license": "MIT",
+    "homepage": "https://github.com/netlogix/symfony-tolgee-translation-provider",
+    "support": {
+        "issues": "https://github.com/netlogix/symfony-tolgee-translation-provider/issues",
+        "source": "https://github.com/netlogix/symfony-tolgee-translation-provider/",
+        "docs": "https://github.com/netlogix/symfony-tolgee-translation-provider/blob/main/README.md"
+    },
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "ext-zip": "*",
+        "symfony/config": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/http-client": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/intl": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/mime": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/polyfill-intl-icu": "^1.28",
+        "symfony/translation": "^5.4 || ^6.4 || ^7.0 || ^8.0"
+    },
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
+        "ergebnis/composer-normalize": "*",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^9.6",
+        "rector/rector": "*",
+        "symfony/console": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/framework-bundle": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/phpunit-bridge": "^5.4 || ^6.4 || ^7.0 || ^8.0"
+    },
     "autoload": {
         "psr-4": {
             "Netlogix\\SymfonyTolgeeTranslationProvider\\": "src/"
@@ -31,23 +51,41 @@
             "Netlogix\\SymfonyTolgeeTranslationProvider\\Test\\": "tests/"
         }
     },
-    "require": {
-        "php": "^7.2 || ^8.0 || ^8.1 || ^8.2 || ^8.3",
-        "symfony/config": "^5.4 || ^6.4 || ^7.0",
-        "symfony/http-client": "^5.4 || ^6.4 || ^7.0",
-        "symfony/intl": "^5.4 || ^6.4 || ^7.0",
-        "symfony/mime": "^5.4 || ^6.4 || ^7.0",
-        "symfony/polyfill-intl-icu": "^1.28",
-        "symfony/translation": "^5.4 || ^6.4 || ^7.0"
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true,
+            "ergebnis/composer-normalize": true
+        }
     },
-    "require-dev": {
-        "symfony/phpunit-bridge": "^5.4 || ^6.4 || ^7.0",
-        "symfony/framework-bundle": "^5.4 || ^6.4 || ^7.0",
-        "symfony/console": "^5.4 || ^6.4 || ^7.0",
-        "phpunit/phpunit": "^9.6",
-        "mockery/mockery": "^1.6"
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": true,
+            "forward-command": false
+        }
     },
     "scripts": {
+        "apply-coding-standard": [
+            "@composer:normalize:fix",
+            "@rector:fix",
+            "@lint:fix",
+            "@format:fix"
+        ],
+        "coding-standard": [
+            "@composer:normalize",
+            "@rector",
+            "@lint",
+            "@format"
+        ],
+        "composer:normalize": "@composer normalize --no-check-lock --dry-run",
+        "composer:normalize:fix": "@composer normalize --no-check-lock",
+        "format": "mago fmt --dry-run",
+        "format:fix": "mago fmt",
+        "lint": "mago lint",
+        "lint:fix": "mago lint --fix",
+        "lint:unsafe": "mago lint --unsafe --dry-run",
+        "lint:unsafe:fix": "mago lint --fix --unsafe",
+        "rector": "rector process --dry-run",
+        "rector:fix": "rector process",
         "test": "phpunit",
         "test-coverage": "XDEBUG_MODE=coverage phpunit --coverage-html=coverage"
     }
