@@ -153,7 +153,7 @@ class TolgeeProvider implements ProviderInterface
 
         foreach ($translatorBag->getCatalogues() as $cataloge) {
             $locale = $cataloge->getLocale();
-            if (!in_array($locale, $languages, strict: true)) {
+            if (!in_array($locale, $languages, true)) {
                 $this->addLanguage($locale);
             }
             foreach ($cataloge->getDomains() as $domain) {
@@ -290,7 +290,7 @@ class TolgeeProvider implements ProviderInterface
 
     private function importApply(string $forceMode = 'KEEP'): void
     {
-        if (!in_array($forceMode, self::ALLOWED_FORCE_MODES, strict: true)) {
+        if (!in_array($forceMode, self::ALLOWED_FORCE_MODES, true)) {
             throw new InvalidArgumentException(sprintf(
                 'Invalid force mode "%s". Allowed modes are: %s',
                 $forceMode,

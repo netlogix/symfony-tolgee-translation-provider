@@ -4,7 +4,6 @@ declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Symfony;
 
-use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Translation\Loader\LoaderInterface;
 use Symfony\Component\Translation\Test\AbstractProviderFactoryTestCase;
 use Symfony\Component\Translation\Test\IncompleteDsnTestTrait;
@@ -25,7 +24,7 @@ if (class_exists(ProviderFactoryTestCase::class)) {
     {
         use IncompleteDsnTestTrait;
 
-        protected LoaderInterface|MockObject $loader;
+        protected $loader;
 
         protected function getLoader(): LoaderInterface
         {
