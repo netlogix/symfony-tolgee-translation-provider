@@ -24,12 +24,12 @@
     "require": {
         "php": "^7.4 || ^8.0",
         "ext-zip": "*",
-        "symfony/config": "^5.4 || ^6.4 || ^7.0",
-        "symfony/http-client": "^5.4 || ^6.4 || ^7.0",
-        "symfony/intl": "^5.4 || ^6.4 || ^7.0",
-        "symfony/mime": "^5.4 || ^6.4 || ^7.0",
+        "symfony/config": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/http-client": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/intl": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/mime": "^5.4 || ^6.4 || ^7.0 || ^8.0",
         "symfony/polyfill-intl-icu": "^1.28",
-        "symfony/translation": "^5.4 || ^6.4 || ^7.0"
+        "symfony/translation": "^5.4 || ^6.4 || ^7.0 || ^8.0"
     },
     "require-dev": {
         "carthage-software/mago": "*",
@@ -37,9 +37,9 @@
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^9.6",
         "rector/rector": "*",
-        "symfony/console": "^5.4 || ^6.4 || ^7.0",
-        "symfony/framework-bundle": "^5.4 || ^6.4 || ^7.0",
-        "symfony/phpunit-bridge": "^5.4 || ^6.4 || ^7.0"
+        "symfony/console": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/framework-bundle": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/phpunit-bridge": "^5.4 || ^6.4 || ^7.0 || ^8.0"
     },
     "autoload": {
         "psr-4": {

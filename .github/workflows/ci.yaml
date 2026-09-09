@@ -34,6 +34,10 @@ jobs:
           - { php: 8.3, symfony: 7.0 }
           - { php: 8.4, symfony: 7.0 }
           - { php: 8.5, symfony: 7.0 }
+          - { php: 8.4, symfony: 8.0 }
+          - { php: 8.5, symfony: 8.0 }
+          - { php: 8.4, symfony: 8.1 }
+          - { php: 8.5, symfony: 8.1 }
 
     steps:
       - uses: actions/checkout@v7
@@ -50,8 +54,18 @@ jobs:
           php-version: ${{ matrix.env.php }}
           coverage: pcov
 
-      - name: Configure Symfony
-        run: composer config extra.symfony.require "${{ matrix.env.symfony }}"
+      - name: Constrain Symfony version
+        run: |
+          composer require --no-update \
+            "symfony/config:${{ matrix.env.symfony }}.*" \
+            "symfony/http-client:${{ matrix.env.symfony }}.*" \
+            "symfony/intl:${{ matrix.env.symfony }}.*" \
+            "symfony/mime:${{ matrix.env.symfony }}.*" \
+            "symfony/translation:${{ matrix.env.symfony }}.*"
+          composer require --no-update --dev \
+            "symfony/console:${{ matrix.env.symfony }}.*" \
+            "symfony/framework-bundle:${{ matrix.env.symfony }}.*" \
+            "symfony/phpunit-bridge:${{ matrix.env.symfony }}.*"
 
       - name: Install composer
         run: composer update --no-progress --ansi --prefer-stable
