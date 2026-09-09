@@ -1,5 +1,7 @@
 /composer.lock
 /vendor
+/vendor-bin/*/vendor
+/vendor-bin/*/composer.lock
 
 /node_modules
 .idea

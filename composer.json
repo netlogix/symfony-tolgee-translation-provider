@@ -32,7 +32,7 @@
         "symfony/translation": "^5.4 || ^6.4 || ^7.0 || ^8.0"
     },
     "require-dev": {
-        "carthage-software/mago": "*",
+        "bamarni/composer-bin-plugin": "^1.8",
         "ergebnis/composer-normalize": "*",
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^9.6",
@@ -53,8 +53,14 @@
     },
     "config": {
         "allow-plugins": {
-            "carthage-software/mago": true,
+            "bamarni/composer-bin-plugin": true,
             "ergebnis/composer-normalize": true
+        }
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": true,
+            "forward-command": false
         }
     },
     "scripts": {
