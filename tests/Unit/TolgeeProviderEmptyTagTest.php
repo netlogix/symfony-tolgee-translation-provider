@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Unit;
 
+use ZipArchive;
 use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -91,13 +92,11 @@ class TolgeeProviderEmptyTagTest extends TestCase
 
     public function testMissingTaggedKeysAreLoggedAsDebug(): void
     {
-        $client = new MockHttpClient(function () {
-            return new MockResponse(json_encode(['code' => 'no_exported_result']), ['http_code' => 400]);
-        }, self::BASE_URI);
+        $client = new MockHttpClient(fn() => new MockResponse(json_encode(['code' => 'no_exported_result']), ['http_code' => 400]), self::BASE_URI);
 
         $loggedLevels = [];
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->method('log')->willReturnCallback(function ($level, $message) use (&$loggedLevels) {
+        $logger->method('log')->willReturnCallback(function ($level, $message) use (&$loggedLevels): void {
             $loggedLevels[] = [$level, $message];
         });
         $logger->expects(self::never())->method('warning');
@@ -133,8 +132,8 @@ class TolgeeProviderEmptyTagTest extends TestCase
     private static function createZip(array $files): string
     {
         $zipFile = tempnam(sys_get_temp_dir(), 'tolgee_test_zip_');
-        $zip = new \ZipArchive();
-        $zip->open($zipFile, \ZipArchive::OVERWRITE);
+        $zip = new ZipArchive();
+        $zip->open($zipFile, ZipArchive::OVERWRITE);
         foreach ($files as $name => $content) {
             $zip->addFromString($name, json_encode($content));
         }
