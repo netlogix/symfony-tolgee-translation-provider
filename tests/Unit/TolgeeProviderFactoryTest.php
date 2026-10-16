@@ -51,20 +51,20 @@ class TolgeeProviderFactoryTest extends TestCase
             '123'
         ];
 
-        yield "with empty tag" => [
+        yield 'with empty tag' => [
             'tolgees://4:123@localhost?emptyTag=empty',
             'https://localhost/v2/projects/4/',
             '123'
         ];
 
-        yield "with empty tag containing a comma" => [
+        yield 'with empty tag containing a comma' => [
             'tolgees://4:123@localhost?emptyTag=a%2Cb',
             'https://localhost/v2/projects/4/',
             '123',
             IncompleteDsnException::class
         ];
 
-        yield "with unsupported filter" => [
+        yield 'with unsupported filter' => [
             'tolgees://4:123@localhost/FOO_BAR',
             'https://localhost/v2/projects/4/',
             '123',
@@ -112,17 +112,17 @@ class TolgeeProviderFactoryTest extends TestCase
 
     public static function emptyTagDataProvider(): iterable
     {
-        yield "tag name" => [
+        yield 'tag name' => [
             'tolgees://4:123@localhost?emptyTag=empty',
             'empty'
         ];
 
-        yield "tag name 0" => [
+        yield 'tag name 0' => [
             'tolgees://4:123@localhost?emptyTag=0',
             '0'
         ];
 
-        yield "empty value" => [
+        yield 'empty value' => [
             'tolgees://4:123@localhost?emptyTag=',
             null
         ];

@@ -74,7 +74,7 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
         if ($emptyTag === '') {
             $emptyTag = null;
         }
-        if ($emptyTag !== null && (!is_string($emptyTag) || strpos($emptyTag, ',') !== false)) {
+        if ($emptyTag !== null && ( !is_string($emptyTag) || strpos($emptyTag, ',') !== false )) {
             throw new IncompleteDsnException('Empty tag is not valid. It has to be a single tag name without commas.');
         }
 

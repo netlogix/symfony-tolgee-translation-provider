@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Unit;
 
@@ -27,12 +27,12 @@ class TolgeeProviderEmptyTagTest extends TestCase
             if (isset($options['query']['filterTagIn'])) {
                 return new MockResponse(self::createZip([
                     'messages/de.json' => ['header' => ['supportInfo' => null, 'withText' => 'Text in Tolgee']],
-                    'messages/en.json' => ['header' => ['supportInfo' => null, 'withText' => 'Text in Tolgee']],
+                    'messages/en.json' => ['header' => ['supportInfo' => null, 'withText' => 'Text in Tolgee']]
                 ]));
             }
 
             return new MockResponse(self::createZip([
-                'messages/de.json' => ['header' => ['withText' => 'Text in Tolgee', 'untagged' => 'Bleibt']],
+                'messages/de.json' => ['header' => ['withText' => 'Text in Tolgee', 'untagged' => 'Bleibt']]
             ]));
         }, self::BASE_URI);
 
@@ -42,14 +42,14 @@ class TolgeeProviderEmptyTagTest extends TestCase
             [
                 'header.withText' => '',
                 'header.untagged' => 'Bleibt',
-                'header.supportInfo' => '',
+                'header.supportInfo' => ''
             ],
             $translatorBag->getCatalogue('de')->all('messages')
         );
         self::assertSame(
             [
                 'header.supportInfo' => '',
-                'header.withText' => '',
+                'header.withText' => ''
             ],
             $translatorBag->getCatalogue('en')->all('messages')
         );
@@ -92,13 +92,17 @@ class TolgeeProviderEmptyTagTest extends TestCase
 
     public function testMissingTaggedKeysAreLoggedAsDebug(): void
     {
-        $client = new MockHttpClient(fn() => new MockResponse(json_encode(['code' => 'no_exported_result']), ['http_code' => 400]), self::BASE_URI);
+        $client = new MockHttpClient(fn() => new MockResponse(json_encode(['code' => 'no_exported_result']), [
+            'http_code' => 400
+        ]), self::BASE_URI);
 
         $loggedLevels = [];
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->method('log')->willReturnCallback(function ($level, $message) use (&$loggedLevels): void {
-            $loggedLevels[] = [$level, $message];
-        });
+        $logger
+            ->method('log')
+            ->willReturnCallback(function ($level, $message) use (&$loggedLevels): void {
+                $loggedLevels[] = [$level, $message];
+            });
         $logger->expects(self::never())->method('warning');
 
         $this->createProvider($client, 'empty', null, $logger)->read(['messages'], ['de']);
@@ -106,7 +110,7 @@ class TolgeeProviderEmptyTagTest extends TestCase
         self::assertSame(
             [
                 [LogLevel::WARNING, 'No exported result from export API'],
-                [LogLevel::DEBUG, 'No exported result from export API'],
+                [LogLevel::DEBUG,   'No exported result from export API']
             ],
             $loggedLevels
         );

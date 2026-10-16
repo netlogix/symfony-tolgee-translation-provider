@@ -134,10 +134,15 @@ class TolgeeProvider implements ProviderInterface
      */
     private function applyEmptyTranslations(TranslatorBag $translatorBag, array $domains, array $locales): void
     {
-        $files = $this->exportFiles($domains, $locales, [
-            'filterTagIn' => $this->emptyTag,
-            'filterState' => implode(',', self::ALLOWED_FILTER_STATES),
-        ], LogLevel::DEBUG);
+        $files = $this->exportFiles(
+            $domains,
+            $locales,
+            [
+                'filterTagIn' => $this->emptyTag,
+                'filterState' => implode(',', self::ALLOWED_FILTER_STATES)
+            ],
+            LogLevel::DEBUG
+        );
 
         foreach ($domains as $domain) {
             if ($domain === null) {
@@ -151,11 +156,18 @@ class TolgeeProvider implements ProviderInterface
                 }
                 $decoded = json_decode($files[$expected], true);
                 if (!is_array($decoded)) {
-                    $this->logger->warning(sprintf('Unable to decode JSON from %s: %s', $expected, json_last_error_msg()));
+                    $this->logger->warning(sprintf(
+                        'Unable to decode JSON from %s: %s',
+                        $expected,
+                        json_last_error_msg()
+                    ));
                     continue;
                 }
 
-                $translatorBag->getCatalogue($language)->add(array_fill_keys($this->flattenKeys($decoded), ''), $domain);
+                $translatorBag->getCatalogue($language)->add(
+                    array_fill_keys($this->flattenKeys($decoded), ''),
+                    $domain
+                );
             }
         }
     }
@@ -376,7 +388,7 @@ class TolgeeProvider implements ProviderInterface
             $this->checkResponseStatusCode($response);
         } catch (Exception $e) {
             $data = $response->toArray(false);
-            if (($data['code'] ?? '') === 'resource_not_found') {
+            if (( $data['code'] ?? '' ) === 'resource_not_found') {
                 return;
             }
             throw $e;
@@ -449,8 +461,7 @@ class TolgeeProvider implements ProviderInterface
         array $locales,
         array $additionalQuery = [],
         string $noResultLogLevel = LogLevel::WARNING
-    ): array
-    {
+    ): array {
         if ($domains === [] || $locales === []) {
             $this->logger->warning('Export skipped because domains or locales are empty', [
                 'domains' => $domains,
@@ -480,12 +491,12 @@ class TolgeeProvider implements ProviderInterface
 
         if (400 === $response->getStatusCode()) {
             $data = $response->toArray(false);
-            if (($data['code'] ?? '') === 'no_exported_result') {
+            if (( $data['code'] ?? '' ) === 'no_exported_result') {
                 $this->logger->log($noResultLogLevel, 'No exported result from export API', [
                     'domains' => $domains,
                     'locales' => $locales,
                     'filterState' => $query['filterState'] ?? null,
-                    'filterTagIn' => $query['filterTagIn'] ?? null,
+                    'filterTagIn' => $query['filterTagIn'] ?? null
                 ]);
 
                 return [];
