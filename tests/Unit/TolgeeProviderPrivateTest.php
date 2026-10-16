@@ -1,9 +1,11 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider\Test\Unit;
 
+use ReflectionClass;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Netlogix\SymfonyTolgeeTranslationProvider\Exception\TolgeeException;
@@ -27,7 +29,7 @@ class TolgeeProviderPrivateTest extends TestCase
 
     public function setUp(): void
     {
-        $this->reflection = new \ReflectionClass(TolgeeProvider::class);
+        $this->reflection = new ReflectionClass(TolgeeProvider::class);
     }
 
     public function createProvider(?HttpClientInterface $client = null): ProviderInterface
@@ -45,97 +47,100 @@ class TolgeeProviderPrivateTest extends TestCase
     {
         $method = $this->reflection->getMethod($method);
         $method->setAccessible(true);
+
         return $method->invoke($provider, ...$args);
     }
 
     public function testImportArgumentException()
     {
         $provider = $this->createProvider();
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->invokeTolgeeProviderMethod($provider, 'import', ['foo']);
     }
 
     public function testImport()
     {
-        $provider = $this->createProvider(new MockHttpClient(
-            function ($method, $url, $options) {
+        $provider = $this->createProvider(new MockHttpClient(static function ($method, $url, $options) {
+            self::assertArrayHasKey('headers', $options);
+            self::assertArrayHasKey('body', $options);
 
-                self::assertArrayHasKey('headers', $options);
-                self::assertArrayHasKey('body', $options);
+            $foundMultiPart = array_reduce(
+                $options['headers'],
+                static fn($carry, $item) => $carry || str_contains($item, 'multipart/form-data; boundary='),
+                false
+            );
+            self::assertTrue($foundMultiPart);
 
-                $foundMultiPart = array_reduce($options['headers'], function ($carry, $item) use (&$foundMultiPart) {
-                    return $carry || strpos($item, 'multipart/form-data; boundary=') !== false;
-                }, false);
-                self::assertTrue($foundMultiPart);
+            $path = str_replace(self::BASE_URI, '', $url);
+            $data = HttpClientFixture::getData('TolgeeApi/ImportTest', $path, $method);
 
-                $path = str_replace(self::BASE_URI, '', $url);
-                $data = HttpClientFixture::getData('TolgeeApi/ImportTest', $path, $method);
-                return new MockResponse($data);
-            },
-            self::BASE_URI
-        ));
+            return new MockResponse($data);
+        }, self::BASE_URI));
 
         $response = $this->invokeTolgeeProviderMethod($provider, 'import', [
             new DataPart('{"foo":"bar en"}', 'en.json', 'application/json'),
             new DataPart('{"foo":"bar de"}', 'de.json', 'application/json')
         ]);
 
-        self::assertEquals([
-            0 => 1000040001,
-            1 => 1000040002
-        ], $response);
+        static::assertEquals(
+            [
+                0 => 1_000_040_001,
+                1 => 1_000_040_002
+            ],
+            $response
+        );
     }
 
     public function testImportError()
     {
-        $provider = $this->createProvider(new \Symfony\Component\HttpClient\MockHttpClient(
-            function ($method, $url, $options) {
+        $provider = $this->createProvider(new MockHttpClient(static function ($method, $url, $options) {
+            self::assertArrayHasKey('headers', $options);
+            self::assertArrayHasKey('body', $options);
 
-                self::assertArrayHasKey('headers', $options);
-                self::assertArrayHasKey('body', $options);
+            $foundMultiPart = array_reduce(
+                $options['headers'],
+                static fn($carry, $item) => $carry || str_contains($item, 'multipart/form-data; boundary='),
+                false
+            );
+            self::assertTrue($foundMultiPart);
 
-                $foundMultiPart = array_reduce($options['headers'], function ($carry, $item) use (&$foundMultiPart) {
-                    return $carry || strpos($item, 'multipart/form-data; boundary=') !== false;
-                }, false);
-                self::assertTrue($foundMultiPart);
+            $path = str_replace(self::BASE_URI, '', $url);
+            $data = HttpClientFixture::getData('TolgeeApi/ImportTestError', $path, $method);
 
-                $path = str_replace(self::BASE_URI, '', $url);
-                $data = HttpClientFixture::getData('TolgeeApi/ImportTestError', $path, $method);
-                return new \Symfony\Component\HttpClient\Response\MockResponse($data);
-            },
-            self::BASE_URI
-        ));
+            return new MockResponse($data);
+        }, self::BASE_URI));
 
         $this->expectException(TolgeeException::class);
 
-        $this->invokeTolgeeProviderMethod($provider,'import',[
+        $this->invokeTolgeeProviderMethod($provider, 'import', [
             new DataPart('', 'de.json', 'application/json')
         ]);
     }
 
     public function testGetLanguages()
     {
-        $provider = $this->createProvider(new \Symfony\Component\HttpClient\MockHttpClient(
-            function ($method, $url, $options) {
-                self::assertArrayHasKey('query', $options);
-                $query = $options['query'];
-                self::assertArrayHasKey('page', $query);
-                $page = $query['page'];
-                $path = str_replace(self::BASE_URI, '', $url);
-                $path = explode('?', $path)[0];
-                $data = HttpClientFixture::getPagedData('TolgeeApi/GetLanguagesTest', $path, $method, $page);
-                return new \Symfony\Component\HttpClient\Response\MockResponse($data);
-            },
-            self::BASE_URI
-        ));
-        
-        $data = iterator_to_array($this->invokeTolgeeProviderMethod($provider,'getLanguages'));
+        $provider = $this->createProvider(new MockHttpClient(static function ($method, $url, $options) {
+            self::assertArrayHasKey('query', $options);
+            $query = $options['query'];
+            self::assertArrayHasKey('page', $query);
+            $page = $query['page'];
+            $path = str_replace(self::BASE_URI, '', $url);
+            $path = explode('?', $path)[0];
+            $data = HttpClientFixture::getPagedData('TolgeeApi/GetLanguagesTest', $path, $method, $page);
 
-        self::assertEquals([
-            1000025006 => "de",
-            1000000001 => "en",
-            1000006002 => "it",
-            1000025007 => "sk"
-        ], $data);
+            return new MockResponse($data);
+        }, self::BASE_URI));
+
+        $data = iterator_to_array($this->invokeTolgeeProviderMethod($provider, 'getLanguages'));
+
+        static::assertEquals(
+            [
+                1_000_025_006 => 'de',
+                1_000_000_001 => 'en',
+                1_000_006_002 => 'it',
+                1_000_025_007 => 'sk'
+            ],
+            $data
+        );
     }
 }

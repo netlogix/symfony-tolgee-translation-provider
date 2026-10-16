@@ -1,0 +1,51 @@
+name: Coding Standard
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  coding-standard:
+    name: "Coding Standard"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Composer cache
+        uses: actions/cache@v6
+        with:
+          path: "vendor"
+          key: ${{ runner.os }}-8.5-composer-${{ hashFiles('composer.json') }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.5
+          coverage: none
+
+      - name: Install composer
+        run: composer update --no-progress --ansi --prefer-stable
+
+      - name: Install coding-standard tooling (mago)
+        run: composer bin coding-standard install --no-progress --ansi
+
+      - name: Check composer.json normalization
+        run: composer composer:normalize
+
+      - name: Rector dry-run
+        run: composer rector
+
+      - name: Mago lint
+        run: composer lint
+
+      - name: Mago format check
+        run: composer format
