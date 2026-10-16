@@ -4,11 +4,27 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - '*'
     target-branch: develop
     labels:
       - dependencies
+
+  - package-ecosystem: 'composer'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    allow:
+      - dependency-type: 'all'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
-      symfony:
+      website:
         patterns:
-          - "symfony/*"
+          - '*'
+    target-branch: develop
+    labels:
+      - dependencies
