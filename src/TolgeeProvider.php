@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Generator;
 use ZipArchive;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 use Netlogix\SymfonyTolgeeTranslationProvider\Exception\TolgeeException;
 use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Component\HttpClient\Exception\RedirectionException;
@@ -49,6 +50,10 @@ class TolgeeProvider implements ProviderInterface
      * @var string|null
      */
     private $filterState;
+    /**
+     * @var string|null
+     */
+    private $emptyTag;
 
     public function __construct(
         HttpClientInterface $client,
@@ -56,7 +61,8 @@ class TolgeeProvider implements ProviderInterface
         LoggerInterface $logger,
         string $defaultLocale,
         string $endpoint,
-        ?string $filterState = null
+        ?string $filterState = null,
+        ?string $emptyTag = null
     ) {
         $this->client = $client;
         $this->loader = $loader;
@@ -64,6 +70,7 @@ class TolgeeProvider implements ProviderInterface
         $this->defaultLocale = $defaultLocale;
         $this->endpoint = $endpoint;
         $this->filterState = $filterState;
+        $this->emptyTag = $emptyTag;
     }
 
     public function __toString(): string
@@ -112,7 +119,59 @@ class TolgeeProvider implements ProviderInterface
             }
         }
 
+        if ($this->emptyTag !== null) {
+            $this->applyEmptyTranslations($translatorBag, $domains, $locales);
+        }
+
         return $translatorBag;
+    }
+
+    /**
+     * Writes into the existing catalogues on purpose: TranslatorBag::addCatalogue() lets
+     * already known messages win, so the empty values would not override exported texts.
+     * The ArrayLoader is not used either because it drops the null values Tolgee exports
+     * for untranslated keys.
+     */
+    private function applyEmptyTranslations(TranslatorBag $translatorBag, array $domains, array $locales): void
+    {
+        $files = $this->exportFiles($domains, $locales, [
+            'filterTagIn' => $this->emptyTag,
+            'filterState' => implode(',', self::ALLOWED_FILTER_STATES),
+        ], LogLevel::DEBUG);
+
+        foreach ($domains as $domain) {
+            if ($domain === null) {
+                continue;
+            }
+
+            foreach ($locales as $language) {
+                $expected = sprintf('%s/%s.json', $domain, $language);
+                if (!isset($files[$expected])) {
+                    continue;
+                }
+                $decoded = json_decode($files[$expected], true);
+                if (!is_array($decoded)) {
+                    $this->logger->warning(sprintf('Unable to decode JSON from %s: %s', $expected, json_last_error_msg()));
+                    continue;
+                }
+
+                $translatorBag->getCatalogue($language)->add(array_fill_keys($this->flattenKeys($decoded), ''), $domain);
+            }
+        }
+    }
+
+    private function flattenKeys(array $messages, string $prefix = ''): array
+    {
+        $keys = [];
+        foreach ($messages as $key => $value) {
+            if (is_array($value)) {
+                $keys = array_merge($keys, $this->flattenKeys($value, $prefix . $key . '.'));
+            } else {
+                $keys[] = $prefix . $key;
+            }
+        }
+
+        return $keys;
     }
 
     public function delete(TranslatorBagInterface $translatorBag): void
@@ -317,7 +376,7 @@ class TolgeeProvider implements ProviderInterface
             $this->checkResponseStatusCode($response);
         } catch (Exception $e) {
             $data = $response->toArray(false);
-            if ($data['code'] ?? '' === 'resource_not_found') {
+            if (($data['code'] ?? '') === 'resource_not_found') {
                 return;
             }
             throw $e;
@@ -385,7 +444,12 @@ class TolgeeProvider implements ProviderInterface
         } while ($pages > $currentPage);
     }
 
-    private function exportFiles(array $domains, array $locales): array
+    private function exportFiles(
+        array $domains,
+        array $locales,
+        array $additionalQuery = [],
+        string $noResultLogLevel = LogLevel::WARNING
+    ): array
     {
         if ($domains === [] || $locales === []) {
             $this->logger->warning('Export skipped because domains or locales are empty', [
@@ -407,6 +471,8 @@ class TolgeeProvider implements ProviderInterface
             $query['filterState'] = $this->filterState;
         }
 
+        $query = array_replace($query, $additionalQuery);
+
         $response = $this->client->request('GET', 'export', [
             'buffer' => true,
             'query' => $query
@@ -414,11 +480,12 @@ class TolgeeProvider implements ProviderInterface
 
         if (400 === $response->getStatusCode()) {
             $data = $response->toArray(false);
-            if ($data['code'] ?? '' === 'no_exported_result') {
-                $this->logger->warning('No exported result from export API', [
+            if (($data['code'] ?? '') === 'no_exported_result') {
+                $this->logger->log($noResultLogLevel, 'No exported result from export API', [
                     'domains' => $domains,
                     'locales' => $locales,
-                    'filterState' => $this->filterState
+                    'filterState' => $query['filterState'] ?? null,
+                    'filterTagIn' => $query['filterTagIn'] ?? null,
                 ]);
 
                 return [];

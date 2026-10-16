@@ -8,6 +8,8 @@ use Mockery;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProviderFactory;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Translation\Exception\IncompleteDsnException;
 use Symfony\Component\Translation\Exception\UnsupportedSchemeException;
 use Symfony\Component\Translation\Loader\ArrayLoader;
@@ -49,7 +51,20 @@ class TolgeeProviderFactoryTest extends TestCase
             '123'
         ];
 
-        yield 'with unsupported filter' => [
+        yield "with empty tag" => [
+            'tolgees://4:123@localhost?emptyTag=empty',
+            'https://localhost/v2/projects/4/',
+            '123'
+        ];
+
+        yield "with empty tag containing a comma" => [
+            'tolgees://4:123@localhost?emptyTag=a%2Cb',
+            'https://localhost/v2/projects/4/',
+            '123',
+            IncompleteDsnException::class
+        ];
+
+        yield "with unsupported filter" => [
             'tolgees://4:123@localhost/FOO_BAR',
             'https://localhost/v2/projects/4/',
             '123',
@@ -93,6 +108,41 @@ class TolgeeProviderFactoryTest extends TestCase
         }
 
         static::assertInstanceOf(ProviderInterface::class, $subject->create(new Dsn($dsn)));
+    }
+
+    public static function emptyTagDataProvider(): iterable
+    {
+        yield "tag name" => [
+            'tolgees://4:123@localhost?emptyTag=empty',
+            'empty'
+        ];
+
+        yield "tag name 0" => [
+            'tolgees://4:123@localhost?emptyTag=0',
+            '0'
+        ];
+
+        yield "empty value" => [
+            'tolgees://4:123@localhost?emptyTag=',
+            null
+        ];
+    }
+
+    /**
+     * @dataProvider emptyTagDataProvider
+     */
+    public function testEmptyTagIsPassedToProvider(string $dsn, ?string $expectedTag)
+    {
+        $requestedTags = [];
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$requestedTags) {
+            $requestedTags[] = $options['query']['filterTagIn'] ?? null;
+
+            return new MockResponse(json_encode(['code' => 'no_exported_result']), ['http_code' => 400]);
+        });
+
+        $this->getFactory($client)->create(new Dsn($dsn))->read(['messages'], ['de']);
+
+        $this->assertSame($expectedTag === null ? [null] : [null, $expectedTag], $requestedTags);
     }
 
     private function getFactory(HttpClientInterface $client): TolgeeProviderFactory
