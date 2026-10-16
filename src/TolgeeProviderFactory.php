@@ -70,13 +70,22 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
             );
         }
 
+        $emptyTag = $dsn->getOption('emptyTag');
+        if ($emptyTag === '') {
+            $emptyTag = null;
+        }
+        if ($emptyTag !== null && ( !is_string($emptyTag) || strpos($emptyTag, ',') !== false )) {
+            throw new IncompleteDsnException('Empty tag is not valid. It has to be a single tag name without commas.');
+        }
+
         return new TolgeeProvider(
             $client,
             $this->loader,
             $this->logger,
             $this->defaultLocale,
             $dsn->getHost() . ( $dsn->getPort() ? ':' . $dsn->getPort() : '' ),
-            $filterState
+            $filterState,
+            $emptyTag
         );
     }
 
