@@ -63,7 +63,7 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
 
         if (
             ( $filterState = $dsn->getPath() ? trim($dsn->getPath(), '/') : null )
-            && !in_array($filterState, TolgeeProvider::ALLOWED_FILTER_STATES, true)
+            && array_diff(explode(',', $filterState), TolgeeProvider::ALLOWED_FILTER_STATES) !== []
         ) {
             throw new IncompleteDsnException(
                 'Filter state is not valid. Allowed values are: ' . implode(', ', TolgeeProvider::ALLOWED_FILTER_STATES)

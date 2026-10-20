@@ -99,6 +99,10 @@ class TolgeeProvider implements ProviderInterface
                     ));
                     continue;
                 }
+                // Tolgee exports untranslated keys as null, which ArrayLoader would drop.
+                array_walk_recursive($decoded, static function (&$value): void {
+                    $value ??= '';
+                });
                 try {
                     $tolgeeCatalogue = $this->loader->load($decoded, $language, $domain);
                     $translatorBag->addCatalogue($tolgeeCatalogue);
