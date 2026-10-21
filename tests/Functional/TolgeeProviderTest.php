@@ -91,7 +91,8 @@ class TolgeeProviderTest extends KernelTestCase
             ],
             'message' => [
                 'de' => [
-                    'wellcome' => 'Willkommen'
+                    'wellcome' => 'Willkommen',
+                    'goodbye' => ''
                 ],
                 'en' => [
                     'wellcome' => 'Wellcome'

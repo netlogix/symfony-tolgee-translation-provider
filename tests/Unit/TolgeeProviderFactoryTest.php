@@ -49,6 +49,19 @@ class TolgeeProviderFactoryTest extends TestCase
             '123'
         ];
 
+        yield 'with multiple filters' => [
+            'tolgees://4:123@localhost/TRANSLATED,REVIEWED,UNTRANSLATED',
+            'https://localhost/v2/projects/4/',
+            '123'
+        ];
+
+        yield 'with one unsupported filter of multiple' => [
+            'tolgees://4:123@localhost/TRANSLATED,FOO_BAR',
+            'https://localhost/v2/projects/4/',
+            '123',
+            IncompleteDsnException::class
+        ];
+
         yield 'with unsupported filter' => [
             'tolgees://4:123@localhost/FOO_BAR',
             'https://localhost/v2/projects/4/',
