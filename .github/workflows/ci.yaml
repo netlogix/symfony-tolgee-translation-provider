@@ -10,11 +10,15 @@ on:
       - main
       - develop
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   test:
     name: "PHP ${{ matrix.env.php }} - Symfony ${{ matrix.env.symfony }}"
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.env.experimental == true }}
+    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
@@ -26,16 +30,16 @@ jobs:
           - { php: 8.1, symfony: 6.4 }
           - { php: 8.2, symfony: 6.4 }
           - { php: 8.3, symfony: 6.4 }
-          - { php: 8.4, symfony: 6.4, experimental: true }
-          - { php: 8.2, symfony: 7.1, experimental: true }
-          - { php: 8.3, symfony: 7.1, experimental: true }
-          - { php: 8.4, symfony: 7.1, experimental: true }
+          - { php: 8.4, symfony: '8.0' }
+          - { php: 8.5, symfony: '8.0' }
+          - { php: 8.4, symfony: 8.1 }
+          - { php: 8.5, symfony: 8.1 }
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Composer cache
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: "vendor"
           key: ${{ runner.os }}-${{ matrix.env.php }}-composer-${{ hashFiles('composer.json') }}
@@ -46,8 +50,18 @@ jobs:
           php-version: ${{ matrix.env.php }}
           coverage: pcov
 
-      - name: Configure Symfony
-        run: composer config extra.symfony.require "${{ matrix.env.symfony }}"
+      - name: Constrain Symfony version
+        run: |
+          composer require --no-update \
+            "symfony/config:${{ matrix.env.symfony }}.*" \
+            "symfony/http-client:${{ matrix.env.symfony }}.*" \
+            "symfony/intl:${{ matrix.env.symfony }}.*" \
+            "symfony/mime:${{ matrix.env.symfony }}.*" \
+            "symfony/translation:${{ matrix.env.symfony }}.*"
+          composer require --no-update --dev \
+            "symfony/console:${{ matrix.env.symfony }}.*" \
+            "symfony/framework-bundle:${{ matrix.env.symfony }}.*" \
+            "symfony/phpunit-bridge:${{ matrix.env.symfony }}.*"
 
       - name: Install composer
         run: composer update --no-progress --ansi --prefer-stable
@@ -61,19 +75,19 @@ jobs:
         run: vendor/bin/phpunit \
           --configuration phpunit.xml.dist \
           --coverage-php "coverage/test.${{ matrix.env.php }}.${{ matrix.env.symfony }}.cov"
-  
+
       - name: upload coverage file
         if: "${{github.event_name}} == 'pull_request'"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
-          name: coverage
+          name: coverage-${{ matrix.env.php }}-${{ matrix.env.symfony }}
           path: "coverage/test.${{ matrix.env.php }}.${{ matrix.env.symfony }}.cov"
 
       - name: upload composer.lock on fail
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
-          name: "composer.php-${{ matrix.env.php }}.symfony-${{ matrix.env.symfony }}"
+          name: "composer-lock-${{ matrix.env.php }}-${{ matrix.env.symfony }}"
           path: |
             composer.json
             composer.lock
@@ -83,12 +97,13 @@ jobs:
     runs-on: ubuntu-latest
     if: "${{ github.event_name }} == 'pull_request'"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v8
         with:
-          name: coverage
+          pattern: coverage-*
           path: coverage
+          merge-multiple: true
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -103,7 +118,7 @@ jobs:
         run: vendor/bin/phpcov merge --clover coverage/clover.xml ./coverage
 
       - name: 'Generate code coverage summary report'
-        uses: saschanowak/CloverCodeCoverageSummary@0.4.0
+        uses: saschanowak/CloverCodeCoverageSummary@1.1.1
         with:
           filename: coverage/clover.xml
 
@@ -113,7 +128,7 @@ jobs:
           cat code-coverage-details.md >> $GITHUB_STEP_SUMMARY
 
       - name: 'Add code coverage summary as pr comment'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           recreate: true
           path: code-coverage-summary.md

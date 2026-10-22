@@ -1,0 +1,13 @@
+{
+    "name": "netlogix/symfony-tolgee-translation-provider-coding-standard",
+    "description": "Isolated coding-standard tooling that requires a newer PHP floor than the library itself supports",
+    "type": "project",
+    "require": {
+        "carthage-software/mago": "*"
+    },
+    "config": {
+        "allow-plugins": {
+            "carthage-software/mago": true
+        }
+    }
+}

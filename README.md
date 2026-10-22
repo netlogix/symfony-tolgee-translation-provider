@@ -1,7 +1,7 @@
-Tolge Translation Provider
+Tolgee Translation Provider
 =============================
 
-Provides [Tolge](https://tolgee.io/) integration for Symfony Translation.
+Provides [Tolgee](https://tolgee.io/) integration for Symfony Translation.
 
 DSN example
 -----------
@@ -19,13 +19,26 @@ DSN=tolgee://PROJECT_ID:API_KEY@default/[FILTER_STATES]
 
 where:
  - `PROJECT_ID` is your tolgee Project ID
- - `API_KEY` is your Lokalise API key
- - `[FILTER_STATES]` this argument is optional.<br>Filter translations with state.<br>Possible values: `UNTRANSLATED`, `TRANSLATED`, `REVIEWED`<br>[tolgee export API](https://tolgee.io/api#tag/Export/operation/export_1)
+ - `API_KEY` is your Tolgee API key
+ - `[FILTER_STATES]` this argument is optional.<br>Filter translations with state, multiple states separated by comma.<br>Possible values: `UNTRANSLATED`, `TRANSLATED`, `REVIEWED`<br>[tolgee export API](https://tolgee.io/api#tag/Export/operation/export_1)
+
+Empty translations
+-----------
+
+Tolgee does not store empty strings, an empty translation is untranslated. Untranslated keys are
+read as empty string (`''`), so include `UNTRANSLATED` in the filter states to deliver empty translations:
+
+```
+DSN=tolgees://PROJECT_ID:API_KEY@default/TRANSLATED,REVIEWED,UNTRANSLATED
+```
+
+Keep in mind that this applies to every untranslated key in every language: they no longer fall back
+to another locale but are shown empty.
 
 
 You get the project ID from the project URL.
 
-[Generate an API key on Tolge](https://app.tolgee.io/account/apiKeys)
+[Generate an API key on Tolgee](https://app.tolgee.io/account/apiKeys)
 
 DevSetup
 -----------

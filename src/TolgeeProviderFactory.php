@@ -1,13 +1,13 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Netlogix\SymfonyTolgeeTranslationProvider;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Translation\Exception\IncompleteDsnException;
 use Symfony\Component\Translation\Exception\UnsupportedSchemeException;
-use Symfony\Component\Translation\Loader\JsonFileLoader;
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Provider\AbstractProviderFactory;
 use Symfony\Component\Translation\Provider\Dsn;
 use Symfony\Component\Translation\Provider\ProviderInterface;
@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class TolgeeProviderFactory extends AbstractProviderFactory
 {
-    /** @var JsonFileLoader */
+    /** @var ArrayLoader */
     private $loader;
 
     /** @var HttpClientInterface */
@@ -27,12 +27,11 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
     /** @var string */
     private $defaultLocale;
 
-
     public function __construct(
         HttpClientInterface $client,
-        LoggerInterface     $logger,
-        string              $defaultLocale,
-        JsonFileLoader      $loader
+        LoggerInterface $logger,
+        string $defaultLocale,
+        ArrayLoader $loader
     ) {
         $this->client = $client;
         $this->logger = $logger;
@@ -54,19 +53,21 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
                 '%s://%s%s/v2/projects/%d/',
                 $dsn->getScheme() === 'tolgees' ? 'https' : 'http',
                 $dsn->getHost(),
-                ($dsn->getPort() ? ":".$dsn->getPort() : ''),
-                (int)$this->getUser($dsn)
+                $dsn->getPort() ? ':' . $dsn->getPort() : '',
+                (int) $this->getUser($dsn)
             ),
             'headers' => [
-                'X-Api-Key' => $this->getPassword($dsn),
-            ],
+                'X-Api-Key' => $this->getPassword($dsn)
+            ]
         ]);
 
         if (
-            ($filterState = $dsn->getPath() ? trim($dsn->getPath(), '/') : NULL)
-            && !in_array($filterState, TolgeeProvider::ALLOWED_FILTER_STATES)
+            ( $filterState = $dsn->getPath() ? trim($dsn->getPath(), '/') : null )
+            && array_diff(explode(',', $filterState), TolgeeProvider::ALLOWED_FILTER_STATES) !== []
         ) {
-            throw new IncompleteDsnException('Filter state is not valid. Allowed values are: ' . implode(', ', TolgeeProvider::ALLOWED_FILTER_STATES));
+            throw new IncompleteDsnException(
+                'Filter state is not valid. Allowed values are: ' . implode(', ', TolgeeProvider::ALLOWED_FILTER_STATES)
+            );
         }
 
         return new TolgeeProvider(
@@ -74,7 +75,7 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
             $this->loader,
             $this->logger,
             $this->defaultLocale,
-            $dsn->getHost() . ($dsn->getPort() ? ':' . $dsn->getPort() : ''),
+            $dsn->getHost() . ( $dsn->getPort() ? ':' . $dsn->getPort() : '' ),
             $filterState
         );
     }

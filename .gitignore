@@ -1,5 +1,9 @@
 /composer.lock
 /vendor
+/vendor-bin/*/vendor
+
+/node_modules
+.idea
 
 /coverage
 /tests/App/var
