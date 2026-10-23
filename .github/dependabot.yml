@@ -22,7 +22,7 @@ updates:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
     groups:
-      website:
+      package:
         patterns:
           - '*'
     target-branch: develop
