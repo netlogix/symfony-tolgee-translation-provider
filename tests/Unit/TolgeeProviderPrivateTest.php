@@ -11,6 +11,7 @@ use Psr\Log\LoggerInterface;
 use Netlogix\SymfonyTolgeeTranslationProvider\Exception\TolgeeException;
 use Netlogix\SymfonyTolgeeTranslationProvider\Test\Fixtures\HttpClientFixture;
 use Netlogix\SymfonyTolgeeTranslationProvider\TolgeeProvider;
+use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mime\Part\DataPart;
@@ -115,6 +116,29 @@ class TolgeeProviderPrivateTest extends TestCase
         $this->invokeTolgeeProviderMethod($provider, 'import', [
             new DataPart('', 'de.json', 'application/json')
         ]);
+    }
+
+    public function testExportFilesWithoutResult()
+    {
+        $provider = $this->createProvider(new MockHttpClient(
+            new MockResponse('{"code":"no_exported_result"}', ['http_code' => 400]),
+            self::BASE_URI
+        ));
+
+        static::assertSame([], $this->invokeTolgeeProviderMethod($provider, 'exportFiles', ['messages'], ['en']));
+    }
+
+    public function testExportFilesWithOtherClientError()
+    {
+        // Other errors (e.g. an invalid filter state) must not be mistaken for an empty export
+        $provider = $this->createProvider(new MockHttpClient(
+            new MockResponse('{"code":"invalid_filter_state"}', ['http_code' => 400]),
+            self::BASE_URI
+        ));
+
+        $this->expectException(ClientException::class);
+
+        $this->invokeTolgeeProviderMethod($provider, 'exportFiles', ['messages'], ['en']);
     }
 
     public function testGetLanguages()

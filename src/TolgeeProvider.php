@@ -438,7 +438,7 @@ class TolgeeProvider implements ProviderInterface
 
         if (400 === $response->getStatusCode()) {
             $data = $response->toArray(false);
-            if ($data['code'] ?? '' === 'no_exported_result') {
+            if (($data['code'] ?? '') === 'no_exported_result') {
                 $this->logger->warning('No exported result from export API', [
                     'domains' => $domains,
                     'locales' => $locales,
