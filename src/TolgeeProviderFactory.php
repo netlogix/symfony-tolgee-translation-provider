@@ -73,7 +73,8 @@ final class TolgeeProviderFactory extends AbstractProviderFactory
         $messageFormat = $dsn->getOption('message_format');
         if ($messageFormat !== null && !in_array($messageFormat, TolgeeProvider::ALLOWED_MESSAGE_FORMATS, true)) {
             throw new IncompleteDsnException(
-                'Message format is not valid. Allowed values are: ' . implode(', ', TolgeeProvider::ALLOWED_MESSAGE_FORMATS)
+                'Message format is not valid. Allowed values are: '
+                    . implode(', ', TolgeeProvider::ALLOWED_MESSAGE_FORMATS)
             );
         }
 

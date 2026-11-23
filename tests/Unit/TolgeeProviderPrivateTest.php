@@ -120,10 +120,9 @@ class TolgeeProviderPrivateTest extends TestCase
 
     public function testExportFilesWithoutResult()
     {
-        $provider = $this->createProvider(new MockHttpClient(
-            new MockResponse('{"code":"no_exported_result"}', ['http_code' => 400]),
-            self::BASE_URI
-        ));
+        $provider = $this->createProvider(new MockHttpClient(new MockResponse('{"code":"no_exported_result"}', [
+            'http_code' => 400
+        ]), self::BASE_URI));
 
         static::assertSame([], $this->invokeTolgeeProviderMethod($provider, 'exportFiles', ['messages'], ['en']));
     }
@@ -131,10 +130,9 @@ class TolgeeProviderPrivateTest extends TestCase
     public function testExportFilesWithOtherClientError()
     {
         // Other errors (e.g. an invalid filter state) must not be mistaken for an empty export
-        $provider = $this->createProvider(new MockHttpClient(
-            new MockResponse('{"code":"invalid_filter_state"}', ['http_code' => 400]),
-            self::BASE_URI
-        ));
+        $provider = $this->createProvider(new MockHttpClient(new MockResponse('{"code":"invalid_filter_state"}', [
+            'http_code' => 400
+        ]), self::BASE_URI));
 
         $this->expectException(ClientException::class);
 
