@@ -69,6 +69,19 @@ class TolgeeProviderFactoryTest extends TestCase
             IncompleteDsnException::class
         ];
 
+        yield 'with message format' => [
+            'tolgees://4:123@localhost?message_format=PHP_SPRINTF',
+            'https://localhost/v2/projects/4/',
+            '123'
+        ];
+
+        yield 'with unsupported message format' => [
+            'tolgees://4:123@localhost?message_format=FOO_BAR',
+            'https://localhost/v2/projects/4/',
+            '123',
+            IncompleteDsnException::class
+        ];
+
         yield 'unsupportet schema' => [
             'http://4:123@localhost:8080',
             null,

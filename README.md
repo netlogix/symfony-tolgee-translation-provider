@@ -22,6 +22,18 @@ where:
  - `API_KEY` is your Tolgee API key
  - `[FILTER_STATES]` this argument is optional.<br>Filter translations with state, multiple states separated by comma.<br>Possible values: `UNTRANSLATED`, `TRANSLATED`, `REVIEWED`<br>[tolgee export API](https://tolgee.io/api#tag/Export/operation/export_1)
 
+Message format
+-----------
+
+Tolgee converts placeholders like `%s` or `%d` to ICU (`{0}`, `{0, number}`) on import. Add the
+`message_format` option to export them in the original format again, e.g. for PHP `sprintf` labels:
+
+```
+DSN=tolgees://PROJECT_ID:API_KEY@default?message_format=PHP_SPRINTF
+```
+
+Possible values: `C_SPRINTF`, `PHP_SPRINTF`, `JAVA_STRING_FORMAT`, `APPLE_SPRINTF`, `RUBY_SPRINTF`, `I18NEXT`, `ICU`, `PYTHON_PERCENT`<br>[tolgee export API](https://tolgee.io/api#tag/Export/operation/export_1)
+
 Empty translations
 -----------
 

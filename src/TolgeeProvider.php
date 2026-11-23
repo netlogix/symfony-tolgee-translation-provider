@@ -35,6 +35,16 @@ class TolgeeProvider implements ProviderInterface
             'KEEP',
             'OVERRIDE',
             'MERGE'
+        ],
+        ALLOWED_MESSAGE_FORMATS = [
+            'C_SPRINTF',
+            'PHP_SPRINTF',
+            'JAVA_STRING_FORMAT',
+            'APPLE_SPRINTF',
+            'RUBY_SPRINTF',
+            'I18NEXT',
+            'ICU',
+            'PYTHON_PERCENT'
         ]
     ;
 
@@ -49,6 +59,10 @@ class TolgeeProvider implements ProviderInterface
      * @var string|null
      */
     private $filterState;
+    /**
+     * @var string|null
+     */
+    private $messageFormat;
 
     public function __construct(
         HttpClientInterface $client,
@@ -56,7 +70,8 @@ class TolgeeProvider implements ProviderInterface
         LoggerInterface $logger,
         string $defaultLocale,
         string $endpoint,
-        ?string $filterState = null
+        ?string $filterState = null,
+        ?string $messageFormat = null
     ) {
         $this->client = $client;
         $this->loader = $loader;
@@ -64,6 +79,7 @@ class TolgeeProvider implements ProviderInterface
         $this->defaultLocale = $defaultLocale;
         $this->endpoint = $endpoint;
         $this->filterState = $filterState;
+        $this->messageFormat = $messageFormat;
     }
 
     public function __toString(): string
@@ -411,6 +427,10 @@ class TolgeeProvider implements ProviderInterface
             $query['filterState'] = $this->filterState;
         }
 
+        if ($this->messageFormat) {
+            $query['messageFormat'] = $this->messageFormat;
+        }
+
         $response = $this->client->request('GET', 'export', [
             'buffer' => true,
             'query' => $query
@@ -418,7 +438,7 @@ class TolgeeProvider implements ProviderInterface
 
         if (400 === $response->getStatusCode()) {
             $data = $response->toArray(false);
-            if ($data['code'] ?? '' === 'no_exported_result') {
+            if (( $data['code'] ?? '' ) === 'no_exported_result') {
                 $this->logger->warning('No exported result from export API', [
                     'domains' => $domains,
                     'locales' => $locales,
