@@ -37,7 +37,7 @@ class InvisibleWrapperTest extends TestCase
     {
         $text = "Zero\u{200C}width non-joiner and Zero\u{200D}width joiner";
 
-        self::assertSame($text, (new InvisibleWrapper())->removeMarkers($text));
+        self::assertSame($text, ( new InvisibleWrapper() )->removeMarkers($text));
     }
 
     /**

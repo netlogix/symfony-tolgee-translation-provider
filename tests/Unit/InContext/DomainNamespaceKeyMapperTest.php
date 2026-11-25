@@ -14,7 +14,7 @@ class DomainNamespaceKeyMapperTest extends TestCase
     {
         self::assertEquals(
             new TolgeeKey('checkout.title', 'messages'),
-            (new DomainNamespaceKeyMapper())->map('checkout.title', 'messages')
+            ( new DomainNamespaceKeyMapper() )->map('checkout.title', 'messages')
         );
     }
 
@@ -22,20 +22,20 @@ class DomainNamespaceKeyMapperTest extends TestCase
     {
         self::assertEquals(
             new TolgeeKey('checkout.title', 'messages'),
-            (new DomainNamespaceKeyMapper())->map('checkout.title', null)
+            ( new DomainNamespaceKeyMapper() )->map('checkout.title', null)
         );
     }
 
     public function testSkipsDomainsThatAreNotConfigured(): void
     {
-        self::assertNull((new DomainNamespaceKeyMapper())->map('This value is not valid.', 'validators'));
+        self::assertNull(( new DomainNamespaceKeyMapper() )->map('This value is not valid.', 'validators'));
     }
 
     public function testMapsAdditionallyConfiguredDomains(): void
     {
         self::assertEquals(
             new TolgeeKey('This value is not valid.', 'validators'),
-            (new DomainNamespaceKeyMapper(['messages', 'validators']))->map('This value is not valid.', 'validators')
+            ( new DomainNamespaceKeyMapper(['messages', 'validators']) )->map('This value is not valid.', 'validators')
         );
     }
 }

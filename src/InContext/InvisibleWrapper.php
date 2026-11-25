@@ -11,7 +11,7 @@ class InvisibleWrapper
 {
     private const BIT_CHARACTERS = [
         '0' => "\u{200C}",
-        '1' => "\u{200D}",
+        '1' => "\u{200D}"
     ];
 
     private const MESSAGE_END = "\n";
@@ -21,7 +21,7 @@ class InvisibleWrapper
     public function wrap(string $translation, string $key, ?string $namespace = null): string
     {
         $value = [
-            'k' => $key,
+            'k' => $key
         ];
         if ($namespace !== null && $namespace !== '') {
             $value['n'] = $namespace;

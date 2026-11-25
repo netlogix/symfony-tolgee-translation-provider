@@ -26,7 +26,7 @@ class TranslationMarkerTest extends TestCase
     public function testMarksTranslationWithTheMappedKeyWhenActive(): void
     {
         self::assertSame(
-            (new InvisibleWrapper())->wrap(self::TRANSLATION, self::KEY, 'messages'),
+            ( new InvisibleWrapper() )->wrap(self::TRANSLATION, self::KEY, 'messages'),
             $this->createMarker(true)->mark(self::TRANSLATION, self::KEY)
         );
     }
@@ -39,14 +39,18 @@ class TranslationMarkerTest extends TestCase
         $marker = new TranslationMarker($this->createState(true), $keyMapper, new InvisibleWrapper());
 
         self::assertSame(
-            (new InvisibleWrapper())->wrap(self::TRANSLATION, 'button.save', 'my_ext.locallang'),
+            ( new InvisibleWrapper() )->wrap(self::TRANSLATION, 'button.save', 'my_ext.locallang'),
             $marker->mark(self::TRANSLATION, 'LLL:EXT:my_ext/Resources/Private/Language/locallang.xlf:button.save')
         );
     }
 
     public function testKeepsTranslationUnmarkedWhenKeyMapperSkipsIt(): void
     {
-        self::assertSame(self::TRANSLATION, $this->createMarker(true)->mark(self::TRANSLATION, self::KEY, 'validators'));
+        self::assertSame(self::TRANSLATION, $this->createMarker(true)->mark(
+            self::TRANSLATION,
+            self::KEY,
+            'validators'
+        ));
     }
 
     public function testKeepsEmptyTranslationsEmpty(): void
@@ -56,7 +60,11 @@ class TranslationMarkerTest extends TestCase
 
     private function createMarker(bool $active): TranslationMarker
     {
-        return new TranslationMarker($this->createState($active), new DomainNamespaceKeyMapper(), new InvisibleWrapper());
+        return new TranslationMarker(
+            $this->createState($active),
+            new DomainNamespaceKeyMapper(),
+            new InvisibleWrapper()
+        );
     }
 
     private function createState(bool $active): InContextState
