@@ -27,7 +27,7 @@ class DomainNamespaceKeyMapper implements KeyMapper
 
     public function map(string $id, ?string $domain): ?TolgeeKey
     {
-        $domain = $domain ?? $this->defaultDomain;
+        $domain ??= $this->defaultDomain;
         if (!in_array($domain, $this->domains, true)) {
             return null;
         }
