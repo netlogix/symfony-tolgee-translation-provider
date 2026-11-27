@@ -40,6 +40,23 @@ You get the project ID from the project URL.
 
 [Generate an API key on Tolgee](https://app.tolgee.io/account/apiKeys)
 
+In-context translation
+-----------
+
+`Netlogix\SymfonyTolgeeTranslationProvider\InContext` contains the framework independent parts for
+[Tolgee in-context translation](https://docs.tolgee.io): rendered translations get their Tolgee key
+appended as invisible characters, which the invisible observer of `@tolgee/web` (`fullKeyEncode: true`) reads.
+
+- `InvisibleWrapper` encodes key and namespace in the format of `@tolgee/web` 7.3 and removes such markers again.
+- `TranslationMarker` marks a translation while the in-context mode is active. The application decides when it is
+  active by implementing `InContextState`.
+- `DomainNamespaceKeyMapper` maps translation domains to Tolgee namespaces the way `TolgeeProvider` stores them.
+  Implement `KeyMapper` for other key formats.
+
+The package does not register services for these classes. The integration into an application (intercepting
+translations, activation, bypassing caches, removing markers from mails, loading the Tolgee SDK in the browser)
+is up to the application.
+
 DevSetup
 -----------
 
