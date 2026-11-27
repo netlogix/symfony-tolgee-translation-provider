@@ -1,3 +1,11 @@
+# [2.2.0](https://github.com/netlogix/symfony-tolgee-translation-provider/compare/v2.1.0...v2.2.0) (2026-11-27)
+
+
+### Features
+
+* adds in-context translation core ([b82142b](https://github.com/netlogix/symfony-tolgee-translation-provider/commit/b82142b48cee0be860a4cbc5b42b0d152ca0b520))
+* replaces Symfony 8.0 with 7.4 in the test matrix ([c29c0fe](https://github.com/netlogix/symfony-tolgee-translation-provider/commit/c29c0fe39cd6d66575351aef4368c6f79d244101))
+
 # [2.1.0](https://github.com/netlogix/symfony-tolgee-translation-provider/compare/v2.0.0...v2.1.0) (2026-10-23)
 
 
